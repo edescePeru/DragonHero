@@ -39,4 +39,7 @@ class Character extends Model
             ->withPivot(['id', 'quantity', 'locked_quantity'])
             ->withTimestamps();
     }
+
+    public function wallet(){return $this->hasOne(CharacterWallet::class);}
+    public function goldTransactions(){return $this->hasMany(GoldTransaction::class);}
 }

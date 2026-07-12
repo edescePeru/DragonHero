@@ -1,0 +1,8 @@
+@extends('layouts.game')
+@section('title','Billetera de '.$character->name)
+@php($breadcrumbs=[['label'=>'Inicio','url'=>route('dashboard')],['label'=>'Mi personaje','url'=>route('characters.show',$character)],['label'=>'Billetera','url'=>null]])
+@section('content')
+<div class="mb-4"><a href="{{ route('characters.show',$character) }}">Volver al personaje</a><h1 class="fs-3 mt-2">Billetera de oro</h1></div>
+<div class="row g-3 mb-4"><div class="col-md-6"><div class="card"><div class="card-body"><span class="text-secondary">Saldo actual</span><h2>{{ $balance->balance() }} oro</h2></div></div></div><div class="col-md-6"><div class="card"><div class="card-body"><span class="text-secondary">Movimientos mostrados</span><h2>{{ $transactions->count() }}</h2></div></div></div></div>
+<div class="card"><div class="card-header"><h2 class="h5 mb-0">Historial</h2></div>@if($transactions->isEmpty())<div class="card-body p-5 text-center text-secondary">Todavía no existen movimientos de oro.</div>@else<div class="table-responsive"><table class="table mb-0"><thead><tr><th>Fecha</th><th>Tipo</th><th>Cantidad</th><th>Razón</th><th>Descripción</th><th>Anterior</th><th>Posterior</th></tr></thead><tbody>@foreach($transactions as $entry)<tr><td>{{ $entry->createdAt() }}</td><td>{{ $entry->transactionType() }}</td><td class="{{ $entry->transactionType()==='credit'?'text-success':'text-danger' }}">{{ $entry->transactionType()==='credit'?'+':'-' }}{{ $entry->amount() }}</td><td>{{ $entry->reasonCode() }}</td><td>{{ $entry->description() ?: '—' }}</td><td>{{ $entry->balanceBefore() }}</td><td><strong>{{ $entry->balanceAfter() }}</strong></td></tr>@endforeach</tbody></table></div>@endif</div>
+@endsection

@@ -11,6 +11,7 @@ use App\Http\Controllers\WorldCatalogController;
 use App\Http\Controllers\RegionCatalogController;
 use App\Http\Controllers\ZoneCatalogController;
 use App\Http\Controllers\CharacterInventoryController;
+use App\Http\Controllers\CharacterWalletController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -20,11 +21,12 @@ Route::middleware('guest')->group(function () {
     Route::post('/registro', RegisterController::class);
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'game.navigation'])->group(function () {
     Route::get('/characters/create', [CharacterController::class, 'create'])->name('characters.create');
     Route::post('/characters', [CharacterController::class, 'store'])->name('characters.store');
     Route::get('/characters/{character}', [CharacterController::class, 'show'])->name('characters.show');
     Route::get('/characters/{character}/inventory', [CharacterInventoryController::class, 'index'])->name('characters.inventory.index');
+    Route::get('/characters/{character}/wallet', [CharacterWalletController::class, 'show'])->name('characters.wallet.show');
 
     Route::get('/', [DashboardController::class, 'index'])
         ->middleware('character.required')
@@ -36,7 +38,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', LogoutController::class)->name('logout');
 });
 
-Route::middleware(['auth', 'character.required'])->group(function () {
+Route::middleware(['auth', 'game.navigation', 'character.required'])->group(function () {
     Route::get('/worlds', [WorldCatalogController::class, 'index'])->name('worlds.index');
     Route::get('/worlds/{world}', [WorldCatalogController::class, 'show'])->name('worlds.show');
     Route::get('/regions/{region}', [RegionCatalogController::class, 'show'])->name('regions.show');

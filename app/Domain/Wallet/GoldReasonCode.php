@@ -1,0 +1,3 @@
+<?php
+namespace App\Domain\Wallet;
+final class GoldReasonCode { const ADMIN_GRANT='admin_grant'; const ADMIN_REMOVE='admin_remove'; const INITIAL_BALANCE='initial_balance'; const HUNTING_REWARD='hunting_reward'; const CRAFTING_COST='crafting_cost'; const SHOP_PURCHASE='shop_purchase'; const SHOP_SALE='shop_sale'; const QUEST_REWARD='quest_reward'; const CORRECTION='correction'; public static function all(){return [self::ADMIN_GRANT,self::ADMIN_REMOVE,self::INITIAL_BALANCE,self::HUNTING_REWARD,self::CRAFTING_COST,self::SHOP_PURCHASE,self::SHOP_SALE,self::QUEST_REWARD,self::CORRECTION];} public static function commandReasons(){return [self::ADMIN_GRANT,self::ADMIN_REMOVE,self::CORRECTION];} }
