@@ -19,6 +19,7 @@
       <li class="px-4 py-2"><small class="nav-text">Personaje</small></li>
       <li><a class="nav-link" href="{{ route('dashboard') }}"><i class="ti ti-home"></i><span class="nav-text">Dashboard</span></a></li>
       <li><a class="nav-link active" href="{{ route('characters.show', $character) }}"><i class="ti ti-user"></i><span class="nav-text">Ficha</span></a></li>
+      <li><a class="nav-link" href="{{ route('characters.inventory.index', $character) }}"><i class="ti ti-backpack"></i><span class="nav-text">Inventario</span></a></li>
     </ul>
   </aside>
   <main id="content" class="content py-10">

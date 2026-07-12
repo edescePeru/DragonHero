@@ -27,4 +27,16 @@ class Character extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function characterItems()
+    {
+        return $this->hasMany(CharacterItem::class);
+    }
+
+    public function items()
+    {
+        return $this->belongsToMany(Item::class, 'character_items')
+            ->withPivot(['id', 'quantity', 'locked_quantity'])
+            ->withTimestamps();
+    }
 }
