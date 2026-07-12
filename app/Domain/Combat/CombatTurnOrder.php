@@ -1,0 +1,3 @@
+<?php
+namespace App\Domain\Combat;use App\Domain\Combat\Data\CombatParticipantState;
+final class CombatTurnOrder {public function build(array $participants){$alive=array_values(array_filter($participants,function($p){return$p instanceof CombatParticipantState&&$p->alive();}));usort($alive,function($a,$b){$speed=$b->stats()->attackSpeed()<=>$a->stats()->attackSpeed();if($speed!==0)return$speed;$side=($a->sideIdentifier()===CombatSide::PLAYERS?0:1)<=>($b->sideIdentifier()===CombatSide::PLAYERS?0:1);if($side!==0)return$side;$position=$a->position()<=>$b->position();return$position!==0?$position:strcmp($a->identifier(),$b->identifier());});return array_map(function($p){return$p->identifier();},$alive);}}

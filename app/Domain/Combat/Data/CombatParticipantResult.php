@@ -1,0 +1,2 @@
+<?php
+namespace App\Domain\Combat\Data;final class CombatParticipantResult {private $v;public function __construct($id,$name,$side,$position,$initial,$final){$this->v=func_get_args();}public function identifier(){return$this->v[0];}public function name(){return$this->v[1];}public function sideIdentifier(){return$this->v[2];}public function position(){return$this->v[3];}public function initialHealth(){return$this->v[4];}public function finalHealth(){return$this->v[5];}public function alive(){return$this->v[5]>0;}}
