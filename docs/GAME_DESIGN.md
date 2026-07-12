@@ -56,6 +56,8 @@ Redis podrá incorporarse más adelante para bloqueos, rate limiting, cache y co
 
 ## Cacerías
 
+La implementación técnica de cacerías manuales se documenta en `docs/HUNTS.md`.
+
 Las cacerías son actividades automáticas iniciadas por el jugador. Una cacería puede depender de la zona, los requisitos del personaje, la duración y posibles costes de entrada.
 
 El servidor registra su inicio y determina cuándo puede resolverse. Al finalizar, valida nuevamente el estado aplicable y genera los resultados. Debe impedir cobros o recompensas duplicadas.
