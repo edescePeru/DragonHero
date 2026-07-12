@@ -1,0 +1,2 @@
+<?php
+namespace App\Domain\Combat\Data;final class CombatStepResult {private $previous;private $command;private $action;private $next;public function __construct(CombatState $previous,CombatCommand $command,CombatAction $action,CombatState $next){$this->previous=$previous;$this->command=$command;$this->action=$action;$this->next=$next;}public function previousState(){return$this->previous;}public function command(){return$this->command;}public function resolvedAction(){return$this->action;}public function nextState(){return$this->next;}}

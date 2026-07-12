@@ -1,0 +1,2 @@
+<?php
+namespace Tests\Unit\Domain\Combat;use App\Domain\Combat\CombatActionType;use App\Domain\Combat\Data\CombatCommand;use PHPUnit\Framework\TestCase;use ReflectionClass;class CombatCommandTest extends TestCase{public function test_immutable_intention(){$c=new CombatCommand(null,'c',CombatActionType::BASIC_ATTACK,'m');$r=new ReflectionClass($c);$this->assertTrue($r->isFinal());$this->assertFalse($r->hasProperty('damage'));}public function test_invalid_action(){$this->expectException(\InvalidArgumentException::class);new CombatCommand(null,'c','spell','m');}}
