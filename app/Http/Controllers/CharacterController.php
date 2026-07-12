@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Characters\Actions\CreateCharacterAction;
+use App\Domain\Characters\CharacterStatsCalculator;
 use App\Http\Requests\Characters\CreateCharacterRequest;
 use App\Models\Character;
 use Illuminate\Http\Request;
@@ -31,10 +32,12 @@ class CharacterController extends Controller
         return redirect()->route('characters.show', $character);
     }
 
-    public function show(Character $character)
+    public function show(Character $character, CharacterStatsCalculator $calculator)
     {
         $this->authorize('view', $character);
 
-        return view('characters.show', compact('character'));
+        $stats = $calculator->calculate($character);
+
+        return view('characters.show', compact('character', 'stats'));
     }
 }

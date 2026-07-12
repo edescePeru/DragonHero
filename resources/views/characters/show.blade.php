@@ -35,18 +35,41 @@
           </div></div>
         </div>
         <div class="col-lg-8">
-          <div class="card"><div class="card-header"><h2 class="h5 mb-0">Estadísticas base</h2></div><div class="card-body p-4">
-            <div class="mb-4"><div class="d-flex justify-content-between mb-2"><span>Vida</span><strong>{{ $character->current_health }} / {{ $character->base_max_health }}</strong></div>
-              <div class="progress"><div class="progress-bar bg-danger" style="width: 100%"></div></div></div>
-            <div class="row g-3">
-              <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Ataque</span><strong>{{ $character->base_attack }}</strong></div></div>
-              <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Defensa</span><strong>{{ $character->base_defense }}</strong></div></div>
-              <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Precisión</span><strong>{{ $character->base_accuracy }}</strong></div></div>
-              <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Evasión</span><strong>{{ $character->base_evasion }}</strong></div></div>
-              <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Crítico</span><strong>{{ $character->base_critical_rate }}%</strong></div></div>
-              <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Estado</span><strong>{{ $character->status }}</strong></div></div>
+          <div class="card mb-3">
+            <div class="card-header"><h2 class="h5 mb-0">Estadísticas base almacenadas</h2></div>
+            <div class="card-body p-4"><div class="row g-3">
+              <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Vida máxima base</span><strong>{{ $character->base_max_health }}</strong></div></div>
+              <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Ataque base</span><strong>{{ $character->base_attack }}</strong></div></div>
+              <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Defensa base</span><strong>{{ $character->base_defense }}</strong></div></div>
+              <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Precisión base</span><strong>{{ $character->base_accuracy }}</strong></div></div>
+              <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Evasión base</span><strong>{{ $character->base_evasion }}</strong></div></div>
+              <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Crítico base</span><strong>{{ $character->base_critical_rate }}%</strong></div></div>
+            </div></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h2 class="h5 mb-0">Estadísticas efectivas</h2><span class="badge bg-primary">Poder {{ $stats->power() }}</span>
             </div>
-          </div></div>
+            <div class="card-body p-4">
+              <div class="mb-4"><div class="d-flex justify-content-between mb-2"><span>Vida efectiva</span><strong>{{ $stats->currentHealth() }} / {{ $stats->maxHealth() }}</strong></div>
+                <div class="progress"><div class="progress-bar bg-danger" style="width: 100%"></div></div></div>
+              <div class="row g-3">
+                <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Ataque</span><strong>{{ $stats->attack() }}</strong></div></div>
+                <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Defensa</span><strong>{{ $stats->defense() }}</strong></div></div>
+                <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Precisión</span><strong>{{ number_format($stats->accuracyRate(), 2) }}%</strong></div></div>
+                <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Evasión</span><strong>{{ number_format($stats->evasionRate(), 2) }}%</strong></div></div>
+                <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Probabilidad crítica</span><strong>{{ number_format($stats->criticalChance(), 2) }}%</strong></div></div>
+                <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Multiplicador crítico</span><strong>x{{ number_format($stats->criticalDamageMultiplier(), 2) }}</strong></div></div>
+                <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Velocidad de ataque</span><strong>{{ number_format($stats->attackSpeed(), 2) }}</strong></div></div>
+                <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Reducción de daño</span><strong>{{ number_format($stats->damageReductionRate(), 2) }}%</strong></div></div>
+                <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Bonus de loot</span><strong>{{ number_format($stats->lootBonus(), 2) }}%</strong></div></div>
+                <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Bonus de experiencia</span><strong>{{ number_format($stats->experienceBonus(), 2) }}%</strong></div></div>
+                <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Bonus de oro</span><strong>{{ number_format($stats->goldBonus(), 2) }}%</strong></div></div>
+                <div class="col-md-6"><div class="border rounded p-3 d-flex justify-content-between"><span>Poder total</span><strong>{{ $stats->power() }}</strong></div></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

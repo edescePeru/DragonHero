@@ -174,7 +174,7 @@
         <div class="col-12">
           <div class="mb-6">
             <h1 class="fs-3 mb-1">Bienvenido, {{ $character->name }}</h1>
-            <p>Tu aventura comienza en el nivel {{ $character->level }}.</p>
+            <p>Tu aventura comienza en el nivel {{ $character->level }}. Poder actual: {{ $stats->power() }}.</p>
           </div>
         </div>
       </div>
