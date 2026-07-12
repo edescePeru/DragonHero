@@ -143,6 +143,8 @@
             class="nav-text">Dashboard</span></a></li>
       <li><a class="nav-link" href="{{ route('characters.show', $character) }}"><i class="ti ti-user"></i><span
             class="nav-text">Personaje</span></a></li>
+      <li><a class="nav-link" href="{{ route('worlds.index') }}"><i class="ti ti-world"></i><span
+            class="nav-text">Mundo</span></a></li>
       <li><a class="nav-link" href="inventory.html"><i class="ti ti-box-seam"></i><span
             class="nav-text">Inventory</span></a></li>
       <li><a class="nav-link" href="create-product.html"><i class="ti ti-plus"></i><span class="nav-text">Add

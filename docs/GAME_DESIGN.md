@@ -2,6 +2,8 @@
 
 > Estado: documento conceptual inicial. No define valores finales de balance ni constituye una especificación completa de implementación.
 
+El catálogo jerárquico inicial del mundo se documenta en `docs/WORLD_CATALOG.md`.
+
 ## Concepto general
 
 A4gamesDH es un RPG web medieval de gestión y progresión. El jugador administra un personaje, desarrolla sus capacidades y decide cómo emplear tiempo y recursos en actividades como cacerías, combates, dungeons, profesiones y crafteo.

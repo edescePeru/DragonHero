@@ -7,6 +7,9 @@ use App\Http\Controllers\Auth\ShowLoginController;
 use App\Http\Controllers\Auth\ShowRegistrationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CharacterController;
+use App\Http\Controllers\WorldCatalogController;
+use App\Http\Controllers\RegionCatalogController;
+use App\Http\Controllers\ZoneCatalogController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -29,4 +32,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/create-product.html', [DashboardController::class, 'createProduct']);
     Route::get('/docs.html', [DashboardController::class, 'docs']);
     Route::post('/logout', LogoutController::class)->name('logout');
+});
+
+Route::middleware(['auth', 'character.required'])->group(function () {
+    Route::get('/worlds', [WorldCatalogController::class, 'index'])->name('worlds.index');
+    Route::get('/worlds/{world}', [WorldCatalogController::class, 'show'])->name('worlds.show');
+    Route::get('/regions/{region}', [RegionCatalogController::class, 'show'])->name('regions.show');
+    Route::get('/zones/{zone}', [ZoneCatalogController::class, 'show'])->name('zones.show');
 });
