@@ -1,0 +1,57 @@
+# Environment and local credentials
+.env
+.env.*
+!.env.example
+!.env.testing.example
+auth.json
+
+# PHP / Composer
+/vendor/
+composer.phar
+
+# Node / Vite
+/node_modules/
+/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Laravel runtime
+/public/build/
+/public/hot
+/public/storage
+/storage/*.key
+/storage/logs/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/bootstrap/cache/*.php
+
+!/storage/logs/.gitignore
+!/storage/framework/cache/.gitignore
+!/storage/framework/cache/data/.gitignore
+!/storage/framework/sessions/.gitignore
+!/storage/framework/testing/.gitignore
+!/storage/framework/views/.gitignore
+
+# Tests and coverage
+.phpunit.result.cache
+.phpunit.cache/
+/coverage/
+*.lcov
+
+# Editors and operating systems
+/.idea/
+/.fleet/
+/.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local backups and archives
+/.git_backup/
+*.zip
+*.bak
+*.tmp
