@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\Character;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,6 +19,7 @@ class ExampleTest extends TestCase
     public function test_authenticated_user_can_access_dashboard()
     {
         $user = User::factory()->create();
+        Character::factory()->for($user)->create();
 
         $response = $this->actingAs($user)->get('/');
 

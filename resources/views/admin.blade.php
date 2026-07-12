@@ -141,6 +141,8 @@
       <li class="px-4 py-2"><small class="nav-text">Main</small></li>
       <li><a class="nav-link active" href="index.html"><i class="ti ti-home"></i><span
             class="nav-text">Dashboard</span></a></li>
+      <li><a class="nav-link" href="{{ route('characters.show', $character) }}"><i class="ti ti-user"></i><span
+            class="nav-text">Personaje</span></a></li>
       <li><a class="nav-link" href="inventory.html"><i class="ti ti-box-seam"></i><span
             class="nav-text">Inventory</span></a></li>
       <li><a class="nav-link" href="create-product.html"><i class="ti ti-plus"></i><span class="nav-text">Add
@@ -171,8 +173,8 @@
       <div class="row ">
         <div class="col-12">
           <div class="mb-6">
-            <h1 class="fs-3 mb-1">Dashboard</h1>
-            <p>Your main content goes here…</p>
+            <h1 class="fs-3 mb-1">Bienvenido, {{ $character->name }}</h1>
+            <p>Tu aventura comienza en el nivel {{ $character->level }}.</p>
           </div>
         </div>
       </div>

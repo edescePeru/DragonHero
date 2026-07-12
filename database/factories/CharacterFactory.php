@@ -1,0 +1,31 @@
+<?php
+
+namespace Database\Factories;
+
+use App\Domain\Characters\CharacterStatus;
+use App\Models\Character;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+class CharacterFactory extends Factory
+{
+    protected $model = Character::class;
+
+    public function definition()
+    {
+        return [
+            'user_id' => User::factory(),
+            'name' => $this->faker->unique()->userName,
+            'level' => 1,
+            'experience' => 0,
+            'current_health' => 100,
+            'base_max_health' => 100,
+            'base_attack' => 10,
+            'base_defense' => 5,
+            'base_accuracy' => 80,
+            'base_evasion' => 5,
+            'base_critical_rate' => '5.00',
+            'status' => CharacterStatus::ACTIVE,
+        ];
+    }
+}
