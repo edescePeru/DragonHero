@@ -4,9 +4,12 @@ namespace App\Domain\Characters;
 
 use App\Domain\Characters\Data\CharacterStats;
 use App\Models\Character;
+use App\Domain\Stats\DamageReductionCalculator;
 
 final class CharacterStatsCalculator
 {
+    private $damageReduction;
+    public function __construct(DamageReductionCalculator $damageReduction = null){$this->damageReduction=$damageReduction ?: new DamageReductionCalculator();}
     const CRITICAL_DAMAGE_MULTIPLIER = 1.50;
     const ATTACK_SPEED = 1.00;
     const DAMAGE_REDUCTION_CONSTANT = 100;
@@ -33,7 +36,7 @@ final class CharacterStatsCalculator
         $accuracyRate = (float) $character->base_accuracy;
         $evasionRate = (float) $character->base_evasion;
         $criticalChance = $this->decimalToFloat($character->base_critical_rate);
-        $damageReductionRate = $this->calculateDamageReductionRate($defense);
+        $damageReductionRate = $this->damageReduction->calculate($defense);
 
         $power = $this->calculatePower(
             $maxHealth,
@@ -68,17 +71,6 @@ final class CharacterStatsCalculator
     private function decimalToFloat($value)
     {
         return (float) (string) $value;
-    }
-
-    private function calculateDamageReductionRate($defense)
-    {
-        if ($defense <= 0) {
-            return 0.0;
-        }
-
-        $rate = ($defense / ($defense + self::DAMAGE_REDUCTION_CONSTANT)) * 100;
-
-        return min($rate, self::MAX_DAMAGE_REDUCTION_RATE);
     }
 
     private function calculatePower(

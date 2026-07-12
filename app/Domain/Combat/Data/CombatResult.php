@@ -1,0 +1,4 @@
+<?php
+namespace App\Domain\Combat\Data;
+use InvalidArgumentException;
+final class CombatResult {private $v;private $rounds;public function __construct($status,$winner,$count,$chi,$chf,$mhi,$mhf,array $rounds){foreach($rounds as $r)if(!$r instanceof CombatRound)throw new InvalidArgumentException();$this->v=[$status,$winner,$count,$chi,$chf,$mhi,$mhf];$this->rounds=array_values($rounds);}public function status(){return$this->v[0];}public function winnerIdentifier(){return$this->v[1];}public function roundsCount(){return$this->v[2];}public function characterInitialHealth(){return$this->v[3];}public function characterFinalHealth(){return$this->v[4];}public function monsterInitialHealth(){return$this->v[5];}public function monsterFinalHealth(){return$this->v[6];}public function rounds(){return array_slice($this->rounds,0);}}

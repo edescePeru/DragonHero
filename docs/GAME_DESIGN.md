@@ -64,6 +64,8 @@ Duraciones, límites, dificultad, experiencia y tablas de recompensas: **PENDIEN
 
 ## Combate
 
+La especificación técnica del simulador aislado se documenta en `docs/COMBAT.md`.
+
 El combate se calcula completamente en el servidor usando el estado persistido del personaje, su equipamiento, el enemigo y las reglas vigentes. La interfaz presenta el resumen y un registro textual de los eventos relevantes.
 
 Las fórmulas de atributos, daño, defensa, precisión, críticos, turnos, estados y derrota: **PENDIENTES DE DISEÑO Y BALANCE**.
