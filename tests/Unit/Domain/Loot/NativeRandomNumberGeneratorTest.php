@@ -1,0 +1,2 @@
+<?php
+namespace Tests\Unit\Domain\Loot;use App\Domain\Random\NativeRandomNumberGenerator;use InvalidArgumentException;use PHPUnit\Framework\TestCase;class NativeRandomNumberGeneratorTest extends TestCase{public function test_inclusive_fixed_range_and_invalid_range(){$rng=new NativeRandomNumberGenerator();$this->assertSame(5,$rng->randomInt(5,5));$this->expectException(InvalidArgumentException::class);$rng->randomInt(2,1);}}

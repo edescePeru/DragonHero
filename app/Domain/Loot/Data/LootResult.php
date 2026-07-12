@@ -1,0 +1,2 @@
+<?php
+namespace App\Domain\Loot\Data;use InvalidArgumentException;final class LootResult {private $id;private $code;private $name;private $drops;public function __construct($id,$code,$name,array $drops){foreach($drops as $d)if(!$d instanceof LootDrop)throw new InvalidArgumentException();$this->id=$id;$this->code=$code;$this->name=$name;$this->drops=array_values($drops);}public function monsterId(){return$this->id;}public function monsterCode(){return$this->code;}public function monsterName(){return$this->name;}public function drops(){return array_slice($this->drops,0);}}

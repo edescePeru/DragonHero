@@ -72,6 +72,8 @@ Las fórmulas de atributos, daño, defensa, precisión, críticos, turnos, estad
 
 ## Loot
 
+La configuración técnica y generación aislada se documentan en `docs/LOOT.md`.
+
 El loot puede incluir oro, materiales, equipamiento, objetos especiales, cartas o esencias, según la actividad y su tabla de recompensas.
 
 Cada concesión debe estar vinculada a una resolución válida y registrarse dentro de una transacción. Las tablas, rarezas, cantidades y probabilidades: **PENDIENTES DE BALANCE**.
