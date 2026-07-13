@@ -13,6 +13,7 @@ use App\Http\Controllers\ZoneCatalogController;
 use App\Http\Controllers\CharacterInventoryController;
 use App\Http\Controllers\CharacterWalletController;
 use App\Http\Controllers\CharacterHuntController;
+use App\Http\Controllers\CharacterHuntingSessionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -31,6 +32,10 @@ Route::middleware(['auth', 'game.navigation'])->group(function () {
     Route::get('/characters/{character}/hunts', [CharacterHuntController::class, 'index'])->name('characters.hunts.index');
     Route::get('/characters/{character}/hunts/{hunt}', [CharacterHuntController::class, 'show'])->name('characters.hunts.show');
     Route::post('/characters/{character}/zones/{zone}/hunts', [CharacterHuntController::class, 'store'])->name('characters.hunts.store');
+    Route::post('/characters/{character}/zones/{zone}/hunting-sessions', [CharacterHuntingSessionController::class, 'store'])->name('characters.hunting-sessions.store');
+    Route::get('/characters/{character}/hunting-sessions/{huntingSession}', [CharacterHuntingSessionController::class, 'show'])->name('characters.hunting-sessions.show');
+    Route::post('/characters/{character}/hunting-sessions/{huntingSession}/tick', [CharacterHuntingSessionController::class, 'tick'])->name('characters.hunting-sessions.tick');
+    Route::post('/characters/{character}/hunting-sessions/{huntingSession}/stop', [CharacterHuntingSessionController::class, 'stop'])->name('characters.hunting-sessions.stop');
 
     Route::get('/', [DashboardController::class, 'index'])
         ->middleware('character.required')

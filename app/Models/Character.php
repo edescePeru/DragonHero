@@ -44,4 +44,5 @@ class Character extends Model
     public function wallet(){return $this->hasOne(CharacterWallet::class);}
     public function goldTransactions(){return $this->hasMany(GoldTransaction::class);}
     public function hunts(){return $this->hasMany(Hunt::class);}
+    public function huntingSessions(){return $this->hasMany(HuntingSession::class);}
 }

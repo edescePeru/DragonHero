@@ -1,0 +1,2 @@
+<?php
+use Illuminate\Database\Migrations\Migration;use Illuminate\Database\Schema\Blueprint;use Illuminate\Support\Facades\Schema;class AddHuntingSessionIdToHuntsTable extends Migration{public function up(){Schema::table('hunts',function(Blueprint $t){$t->foreignId('hunting_session_id')->nullable()->after('id')->constrained('hunting_sessions')->onDelete('restrict');});}public function down(){Schema::table('hunts',function(Blueprint $t){$t->dropForeign(['hunting_session_id']);$t->dropColumn('hunting_session_id');});}}

@@ -6,6 +6,7 @@
 <p>Nivel recomendado: {{ $zone->recommended_level_min }} - {{ $zone->recommended_level_max ?: 'Sin límite' }}</p>
 @if($errors->has('hunt'))<div class="alert alert-warning">{{ $errors->first('hunt') }}</div>@endif
 @if($navigationCharacter && $zone->status === 'active' && $zone->allows_hunting)<form method="POST" action="{{ route('characters.hunts.store',[$navigationCharacter,$zone]) }}" class="mb-4" onsubmit="this.querySelector('button').disabled=true">@csrf<button class="btn btn-primary">Iniciar cacería</button></form>@endif
+@if($navigationCharacter && $zone->status === 'active' && $zone->allows_hunting)<form method="POST" action="{{ route('characters.hunting-sessions.store',[$navigationCharacter,$zone]) }}" class="mb-4" onsubmit="this.querySelector('button').disabled=true">@csrf<button class="btn btn-success">Iniciar cacería conectada</button></form>@endif
 <div class="row g-3">
  <div class="col-lg-6"><div class="card"><div class="card-header">Conexiones disponibles</div><ul class="list-group list-group-flush">
  @foreach($zone->outgoingConnections as $connection)@if($connection->toZone)<li class="list-group-item"><a href="{{ route('zones.show',$connection->toZone) }}">{{ $connection->toZone->name }}</a></li>@endif @endforeach
