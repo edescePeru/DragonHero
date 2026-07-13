@@ -78,6 +78,9 @@ class HuntingSessionVisualUpdateTest extends TestCase
         $response=$this->actingAs($character->user)->get(route('characters.hunting-sessions.show',[$character,$session]));
         $response->assertOk()->assertSee('function renderLatestHunt',false)->assertSee('function renderGeneratedReward',false)->assertSee('function renderPendingRewardsSummary',false)->assertSee('function renderInventoryCapacity',false)->assertSee('lastRenderedProcessedHuntId',false)->assertSee('Math.min(10000',false)->assertSee('document.createElement',false)->assertSee('textContent',false)->assertDontSee('innerHTML',false)->assertDontSee('insertAdjacentHTML',false);
         $response->assertSee('combat-log-scroll',false)->assertSee('height:26rem',false)->assertSee('overflow-y:auto',false)->assertSee('overflow-x:hidden',false)->assertSee('aria-live="polite"',false)->assertSee('.prepend(node)',false)->assertSee('scrollTop<=20',false)->assertSee('Nuevos eventos',false)->assertSee('combat-log-entry--critical',false)->assertSee('combat-log-entry--miss',false)->assertSee('combat-log-entry--result',false)->assertSee('combat-log-entry--loot',false);
+        $response->assertSee('renderedHuntIds=new Set()',false)->assertSee('renderedEventsByHunt=new Map()',false)->assertSee('function ensureHuntBlock',false)->assertSee("block.dataset.huntId",false)->assertSee("document.getElementById('combat-log').prepend(block)",false)->assertSee("heading.textContent='Encuentro '+hunt.encounter_number",false)->assertSee('function renderInitialHistory',false)->assertSee('Hay eventos anteriores no mostrados',false)->assertDontSee("clearNode(document.getElementById('combat-log'))",false);
+        $response->assertSee('function completeCurrentPlaybackImmediately()',false)->assertSee("renderPlaybackAt(playback,Number(playback.hunt.playback_duration_ms))",false)->assertSee("stopRequested=true",false)->assertSee("if(requestInFlight||stopRequested)return",false)->assertSee("if(stopRequested)sendStop()",false)->assertSee("if(stopInFlight)return",false)->assertSee("event.preventDefault();requestStop(false)",false)->assertSee('Cacería detenida. Se conservaron todos los encuentros y recompensas obtenidos hasta este momento.',false);
+        $response->assertSee('href="'.route('regions.show',$this->zone()->region).'"',false)->assertSee('← Volver a zonas')->assertSee('Detener y volver a zonas')->assertSee('Tu cacería sigue activa')->assertSee('Seguir cazando')->assertSee('Salir de todos modos')->assertSee("if(lastState.status!=='running')return",false)->assertSee('requestStop(true)',false)->assertSee('if(redirectAfterStop)window.location.assign(root.dataset.zonesUrl)',false)->assertSee('No se pudo confirmar la detención',false);
     }
 
     public function test_victory_reward_remains_in_response_when_capacity_stops_same_tick()
@@ -88,5 +91,24 @@ class HuntingSessionVisualUpdateTest extends TestCase
         CharacterItem::create(['character_id'=>$character->id,'item_id'=>$single->id,'quantity'=>25,'locked_quantity'=>0]);
         $service=app(HuntingSessionService::class);$session=HuntingSession::find($service->start($character,$this->zone())->id());$tick=$service->tick($character,$session)->toArray();
         $this->assertSame('stopped',$tick['status']);$this->assertSame(HuntingSessionStopReason::PENDING_INVENTORY_CAPACITY,$tick['stop_reason']);$this->assertNotNull($tick['processed_hunt']);$this->assertNotNull($tick['generated_reward']);$this->assertSame($tick['processed_hunt']['hunt_id'],$tick['generated_reward']['hunt_id']);
+    }
+
+    public function test_initial_history_is_limited_newest_first_and_ticks_do_not_include_it()
+    {
+        $character=$this->player();$service=app(HuntingSessionService::class);$session=HuntingSession::find($service->start($character,$this->zone())->id());
+        $service->tick($character,$session);$source=Hunt::with(['enemies','combatEvents'])->firstOrFail();
+        for($encounter=2;$encounter<=21;$encounter++){
+            $copy=$source->replicate();$copy->save();
+            foreach($source->enemies as $enemy){$enemyCopy=$enemy->replicate();$enemyCopy->hunt_id=$copy->id;$enemyCopy->save();}
+            foreach($source->combatEvents as $event){$eventCopy=$event->replicate();$eventCopy->hunt_id=$copy->id;$eventCopy->save();}
+        }
+        $session->forceFill(['hunts_count'=>21,'victories_count'=>21,'next_encounter_at'=>CarbonImmutable::now()->addMinute()])->save();
+        $service=app(HuntingSessionService::class);$show=$service->show($character,$session)->toArray();$history=$show['session_hunt_history'];
+        $this->assertCount(20,$history['hunts']);$this->assertTrue($history['has_more']);$this->assertSame(20,$history['hunt_limit']);$this->assertSame(200,$history['event_limit']);
+        $this->assertSame(21,$history['hunts'][0]['encounter_number']);$this->assertSame(2,$history['hunts'][19]['encounter_number']);
+        $this->assertGreaterThan($history['hunts'][1]['hunt_id'],$history['hunts'][0]['hunt_id']);
+        $this->assertLessThanOrEqual(200,array_sum(array_map(function($hunt){return count($hunt['events']);},$history['hunts'])));
+        $session->forceFill(['next_encounter_at'=>CarbonImmutable::now()->addMinute()])->save();
+        $early=$service->tick($character,$session)->toArray();$this->assertArrayNotHasKey('session_hunt_history',$early);$this->assertNull($early['processed_hunt']);
     }
 }
