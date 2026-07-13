@@ -1,0 +1,2 @@
+<?php
+namespace App\Models;use Illuminate\Database\Eloquent\Factories\HasFactory;use Illuminate\Database\Eloquent\Model;class HuntRewardItem extends Model{use HasFactory;protected $guarded=[];protected $casts=['quantity'=>'integer'];public function reward(){return$this->belongsTo(HuntReward::class,'hunt_reward_id');}public function huntEnemy(){return$this->belongsTo(HuntEnemy::class);}public function item(){return$this->belongsTo(Item::class);}}

@@ -1,0 +1,2 @@
+<?php
+namespace App\Models;use Illuminate\Database\Eloquent\Factories\HasFactory;use Illuminate\Database\Eloquent\Model;class HuntReward extends Model{use HasFactory;protected $guarded=[];protected $casts=['generated_at'=>'datetime','claimed_at'=>'datetime'];public function hunt(){return$this->belongsTo(Hunt::class);}public function huntingSession(){return$this->belongsTo(HuntingSession::class);}public function items(){return$this->hasMany(HuntRewardItem::class);}}
