@@ -6,6 +6,6 @@
 <div class="card"><div class="card-header"><h2 class="h5 mb-0">Objetos apilables</h2></div>
 @if($entries->isEmpty())<div class="card-body p-5 text-center text-secondary">El inventario está vacío.</div>@else
 <div class="table-responsive"><table class="table mb-0"><thead><tr><th>Objeto</th><th>Tipo</th><th>Rareza</th><th>Total</th><th>Bloqueado</th><th>Disponible</th></tr></thead><tbody>
-@foreach($entries as $entry)<tr><td>{{ $entry->itemName() }}<br><small>{{ $entry->itemCode() }}</small></td><td><span class="badge bg-light text-dark">{{ $entry->itemType() }}</span></td><td>{{ $entry->itemRarity() }}</td><td>{{ $entry->totalQuantity() }}</td><td>{{ $entry->lockedQuantity() }}</td><td><strong>{{ $entry->availableQuantity() }}</strong></td></tr>@endforeach
+@foreach($entries as $entry)@php($inventoryItem=$inventoryItems->get($entry->itemId()))<tr><td><div class="d-flex align-items-center gap-2"><x-media.icon :model="$inventoryItem" :alt="'Icono de '.$entry->itemName()" :placeholder-text="$entry->itemName()" :width="40" :height="40" class="flex-shrink-0 object-fit-cover" /><div>{{ $entry->itemName() }}<br><small>{{ $entry->itemCode() }}</small></div></div></td><td><span class="badge bg-light text-dark">{{ $entry->itemType() }}</span></td><td>{{ $entry->itemRarity() }}</td><td>{{ $entry->totalQuantity() }}</td><td>{{ $entry->lockedQuantity() }}</td><td><strong>{{ $entry->availableQuantity() }}</strong></td></tr>@endforeach
 </tbody></table></div>@endif</div>
 @endsection

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Domain\Characters\Actions\CreateCharacterAction;
 use App\Domain\Characters\CharacterStatsCalculator;
+use App\Domain\Media\MediaAssetType;
 use App\Http\Requests\Characters\CreateCharacterRequest;
 use App\Models\Character;
 use Illuminate\Http\Request;
@@ -35,6 +36,10 @@ class CharacterController extends Controller
     public function show(Character $character, CharacterStatsCalculator $calculator)
     {
         $this->authorize('view', $character);
+
+        $character->load(['mediaAssets' => function ($query) {
+            $query->where('asset_type', MediaAssetType::PORTRAIT);
+        }]);
 
         $stats = $calculator->calculate($character);
 

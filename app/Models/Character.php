@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\HasMediaAssets;
 
 class Character extends Model
 {
-    use HasFactory;
+    use HasFactory, HasMediaAssets;
 
     protected $fillable = ['name'];
 

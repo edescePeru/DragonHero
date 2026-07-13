@@ -1,0 +1,2 @@
+<?php
+namespace App\Domain\Media;final class MediaAssetType {const PORTRAIT='portrait';const ICON='icon';const IMAGE='image';const SPRITE='sprite';const SPRITE_IDLE='sprite_idle';const SPRITE_ATTACK='sprite_attack';const SPRITE_HIT='sprite_hit';const SPRITE_DEATH='sprite_death';const BACKGROUND='background';const CARD='card';public static function values(){return[self::PORTRAIT,self::ICON,self::IMAGE,self::SPRITE,self::SPRITE_IDLE,self::SPRITE_ATTACK,self::SPRITE_HIT,self::SPRITE_DEATH,self::BACKGROUND,self::CARD];}}
