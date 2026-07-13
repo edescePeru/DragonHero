@@ -1,0 +1,3 @@
+<?php
+use Illuminate\Database\Migrations\Migration;use Illuminate\Database\Schema\Blueprint;use Illuminate\Support\Facades\Schema;
+class CreateZoneEncounterSizesTable extends Migration{public function up(){Schema::create('zone_encounter_sizes',function(Blueprint $t){$t->engine='InnoDB';$t->charset='utf8mb4';$t->collation='utf8mb4_unicode_ci';$t->id();$t->foreignId('zone_id')->constrained('zones')->onDelete('restrict');$t->unsignedInteger('enemy_count');$t->unsignedInteger('weight');$t->boolean('is_active')->default(true);$t->unsignedInteger('sort_order')->default(0);$t->timestamps();$t->unique(['zone_id','enemy_count']);$t->index(['zone_id','is_active','sort_order'],'zone_encounter_sizes_active');});}public function down(){Schema::dropIfExists('zone_encounter_sizes');}}

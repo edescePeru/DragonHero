@@ -1,0 +1,2 @@
+<?php
+namespace App\Models;use Illuminate\Database\Eloquent\Factories\HasFactory;use Illuminate\Database\Eloquent\Model;class HuntEnemy extends Model{use HasFactory;protected $guarded=[];protected $casts=['position'=>'integer','initial_health'=>'integer','final_health'=>'integer'];public function hunt(){return$this->belongsTo(Hunt::class);}public function monster(){return$this->belongsTo(Monster::class);}}

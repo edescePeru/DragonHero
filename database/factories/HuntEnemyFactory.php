@@ -1,0 +1,2 @@
+<?php
+namespace Database\Factories;use App\Domain\Hunts\HuntEnemyStatus;use App\Models\HuntEnemy;use App\Models\Monster;use Illuminate\Database\Eloquent\Factories\Factory;class HuntEnemyFactory extends Factory{protected $model=HuntEnemy::class;public function definition(){return['monster_id'=>Monster::query()->value('id'),'position'=>1,'instance_identifier'=>'monster:1:1','monster_code_snapshot'=>'test_monster','monster_name_snapshot'=>'Test monster','initial_health'=>30,'final_health'=>0,'status'=>HuntEnemyStatus::DEFEATED];}}

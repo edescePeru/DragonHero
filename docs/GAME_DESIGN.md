@@ -155,6 +155,8 @@ La selección exacta de atributos, enemigos, objetos, recompensas, tiempos y val
 
 ## Sistemas fuera de la fase 1
 
+Las cacerías manuales pueden resolver un encuentro 1 contra N; la ejecución continua y las sesiones de cacería siguen fuera de alcance. Véase [HUNTS.md](HUNTS.md).
+
 - economía externa o transacciones con valor real;
 - mercado, comercio o intercambios entre jugadores;
 - PvP, gremios y funciones sociales complejas;
