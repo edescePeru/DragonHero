@@ -46,7 +46,7 @@ class HuntingSessionVisualUpdateTest extends TestCase
         $tick=$service->tick($character,$session)->toArray();
         $this->assertSame(CombatResultStatus::CHARACTER_VICTORY,$tick['processed_hunt']['status']);
         $this->assertSame($tick['processed_hunt']['hunt_id'],$tick['generated_reward']['hunt_id']);
-        $this->assertSame(1,$tick['pending_rewards_summary']['rewards_count']);
+        $this->assertSame(1,$tick['session_pending_rewards_summary']['rewards_count']);$this->assertSame(1,$tick['character_pending_rewards_summary']['rewards_count']);
         $this->assertNotNull($tick['inventory_capacity']);
     }
 
@@ -54,7 +54,7 @@ class HuntingSessionVisualUpdateTest extends TestCase
     {
         $character=$this->player();$service=app(HuntingSessionService::class);$session=HuntingSession::find($service->start($character,$this->zone())->id());$first=$service->tick($character,$session)->toArray();$rewardCount=HuntReward::count();
         $early=$service->tick($character,$session)->toArray();
-        $this->assertNull($early['processed_hunt']);$this->assertNull($early['generated_reward']);$this->assertSame($first['pending_rewards_summary'],$early['pending_rewards_summary']);$this->assertSame($rewardCount,HuntReward::count());$this->assertNotNull($early['inventory_capacity']);
+        $this->assertNull($early['processed_hunt']);$this->assertNull($early['generated_reward']);$this->assertSame($first['session_pending_rewards_summary'],$early['session_pending_rewards_summary']);$this->assertSame($first['character_pending_rewards_summary'],$early['character_pending_rewards_summary']);$this->assertSame($rewardCount,HuntReward::count());$this->assertNotNull($early['inventory_capacity']);
         $expired=HuntingSession::factory()->for($character)->create(['zone_id'=>$this->zone()->id,'last_heartbeat_at'=>CarbonImmutable::now()->subSeconds(31),'next_encounter_at'=>CarbonImmutable::now()->subHour()]);
         $timeout=$service->tick($character,$expired)->toArray();$this->assertSame(HuntingSessionStopReason::HEARTBEAT_TIMEOUT,$timeout['stop_reason']);$this->assertNull($timeout['processed_hunt']);$this->assertNull($timeout['generated_reward']);
     }
@@ -62,7 +62,7 @@ class HuntingSessionVisualUpdateTest extends TestCase
     public function test_empty_reward_is_returned_immediately_and_not_duplicated()
     {
         MonsterLootEntry::query()->update(['drop_chance_basis_points'=>1]);$character=$this->player();$service=app(HuntingSessionService::class);$session=HuntingSession::find($service->start($character,$this->zone())->id());$first=$service->tick($character,$session)->toArray();
-        $this->assertSame(0,$first['generated_reward']['item_lines_count']);$this->assertSame([],$first['generated_reward']['items']);$this->assertSame(1,$first['pending_rewards_summary']['rewards_count']);
+        $this->assertSame(0,$first['generated_reward']['item_lines_count']);$this->assertSame([],$first['generated_reward']['items']);$this->assertSame(1,$first['character_pending_rewards_summary']['rewards_count']);
         $second=$service->tick($character,$session)->toArray();$this->assertNull($second['processed_hunt']);$this->assertNull($second['generated_reward']);$this->assertSame(1,HuntReward::count());
     }
 
@@ -79,6 +79,7 @@ class HuntingSessionVisualUpdateTest extends TestCase
         $response->assertOk()->assertSee('function renderLatestHunt',false)->assertSee('function renderGeneratedReward',false)->assertSee('function renderPendingRewardsSummary',false)->assertSee('function renderInventoryCapacity',false)->assertSee('lastRenderedProcessedHuntId',false)->assertSee('Math.min(10000',false)->assertSee('document.createElement',false)->assertSee('textContent',false)->assertDontSee('innerHTML',false)->assertDontSee('insertAdjacentHTML',false);
         $response->assertSee('combat-log-scroll',false)->assertSee('height:26rem',false)->assertSee('overflow-y:auto',false)->assertSee('overflow-x:hidden',false)->assertSee('aria-live="polite"',false)->assertSee('.prepend(node)',false)->assertSee('scrollTop<=20',false)->assertSee('Nuevos eventos',false)->assertSee('combat-log-entry--critical',false)->assertSee('combat-log-entry--miss',false)->assertSee('combat-log-entry--result',false)->assertSee('combat-log-entry--loot',false);
         $response->assertSee('renderedHuntIds=new Set()',false)->assertSee('renderedEventsByHunt=new Map()',false)->assertSee('function ensureHuntBlock',false)->assertSee("block.dataset.huntId",false)->assertSee("document.getElementById('combat-log').prepend(block)",false)->assertSee("heading.textContent='Encuentro '+hunt.encounter_number",false)->assertSee('function renderInitialHistory',false)->assertSee('Hay eventos anteriores no mostrados',false)->assertDontSee("clearNode(document.getElementById('combat-log'))",false);
+        $response->assertSee('renderInventoryItems(data.inventory_items,data.inventory_status)',false)->assertSee("updateClaimButton(data.character_pending_rewards_summary,'idle')",false)->assertSee("button.textContent=requestState==='loading'?'Reclamando…':'Reclamar todas'",false);
         $response->assertSee('function completeCurrentPlaybackImmediately()',false)->assertSee("renderPlaybackAt(playback,Number(playback.hunt.playback_duration_ms))",false)->assertSee("stopRequested=true",false)->assertSee("if(requestInFlight||stopRequested)return",false)->assertSee("if(stopRequested)sendStop()",false)->assertSee("if(stopInFlight)return",false)->assertSee("event.preventDefault();requestStop(false)",false)->assertSee('Cacería detenida. Se conservaron todos los encuentros y recompensas obtenidos hasta este momento.',false);
         $response->assertSee('href="'.route('regions.show',$this->zone()->region).'"',false)->assertSee('← Volver a zonas')->assertSee('Detener y volver a zonas')->assertSee('Tu cacería sigue activa')->assertSee('Seguir cazando')->assertSee('Salir de todos modos')->assertSee("if(lastState.status!=='running')return",false)->assertSee('requestStop(true)',false)->assertSee('if(redirectAfterStop)window.location.assign(root.dataset.zonesUrl)',false)->assertSee('No se pudo confirmar la detención',false);
     }

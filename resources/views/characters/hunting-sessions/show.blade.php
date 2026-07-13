@@ -24,14 +24,19 @@
 </style>
 <div class="row g-3 mt-1"><div class="col-lg-8"><div class="card h-100"><div class="card-header d-flex justify-content-between"><span>Participantes</span><button type="button" class="btn btn-sm btn-outline-secondary" id="skip-playback">Saltar animación</button></div><div class="card-body" id="combat-participants"></div></div></div><div class="col-lg-4"><div class="card h-100"><div class="card-header d-flex justify-content-between align-items-center"><span id="combat-log-heading">Log de combate</span><button type="button" class="btn btn-sm btn-outline-primary d-none" id="combat-log-new-events">Nuevos eventos · Ir al último</button></div><div class="card-body combat-log-scroll" id="combat-log-scroll" tabindex="0" aria-labelledby="combat-log-heading"><p class="small text-secondary d-none" id="combat-log-truncated">Hay eventos anteriores no mostrados.</p><div id="combat-log" role="log" aria-live="polite" aria-relevant="additions"></div></div></div></div></div>
 <div class="card mt-3 d-none" id="generated-reward-card"><div class="card-header">Resultado del último encuentro</div><div class="card-body" id="generated-reward-content"></div></div>
-<div class="card mt-3" id="pending-rewards"><div class="card-header">Recompensas pendientes</div><div class="card-body" id="pending-rewards-content"></div></div>
+<div class="card mt-3" id="session-pending-rewards"><div class="card-header">Obtenido en esta sesión</div><div class="card-body" id="session-pending-rewards-content"></div></div>
+<div class="card mt-3" id="pending-rewards"><div class="card-header">Recompensas pendientes del personaje</div><div class="card-body" id="pending-rewards-content"></div></div>
+<form method="POST" action="{{ route('characters.hunt-rewards.claim',$character) }}" id="claim-rewards-form" class="mt-2">@csrf<button class="btn btn-primary" type="submit">Reclamar todas</button></form>
+<p class="text-secondary mt-2" id="claim-empty-message"></p>
+<div class="card mt-3"><div class="card-header">Inventario actual</div><div class="card-body"><div class="row g-2 mb-3"><div class="col-sm-4">Usados: <strong id="inventory-used-slots"></strong></div><div class="col-sm-4">Libres: <strong id="inventory-free-slots"></strong></div><div class="col-sm-4">Capacidad: <strong id="inventory-effective-capacity"></strong></div></div><div id="inventory-items"></div></div></div>
 <div class="card mt-3" id="inventory-capacity-card"><div class="card-header">Capacidad de inventario</div><div class="card-body" id="inventory-capacity-content"></div></div>
 
 <script>
 (function(){
     const root=document.getElementById('hunting-session');
     const token=document.querySelector('#stop-form input[name="_token"]').value;
-    let timer=null,requestInFlight=false,stopRequested=false,stopInFlight=false,redirectAfterStop=false,lastState=@json($session),lastRenderedProcessedHuntId=null,playback=null,playbackFrame=null,initialHistoryRendered=false;
+    const initialInventory=@json($inventorySummary);
+    let timer=null,requestInFlight=false,stopRequested=false,stopInFlight=false,claimInFlight=false,claimRequested=false,redirectAfterStop=false,lastState=@json($session),lastRenderedProcessedHuntId=null,playback=null,playbackFrame=null,initialHistoryRendered=false;
     const renderedHuntIds=new Set(),renderedEventsByHunt=new Map(),huntBlocks=new Map();
     function clearNode(node){while(node.firstChild)node.removeChild(node.firstChild);}
     function paragraph(text){const node=document.createElement('p');node.textContent=text;return node;}
@@ -55,14 +60,18 @@
         content.appendChild(paragraph('Victoria. Objetos encontrados:'));
         const list=document.createElement('ul');reward.items.forEach(function(item){const row=document.createElement('li');row.textContent=item.item_name+' x'+item.quantity;list.appendChild(row);});content.appendChild(list);
     }
-    function renderPendingRewardsSummary(summary){
-        if(!summary)return;const content=document.getElementById('pending-rewards-content');clearNode(content);
+    function renderRewardsSummary(summary,contentId){
+        if(!summary)return;const content=document.getElementById(contentId);clearNode(content);
         content.appendChild(paragraph('Recompensas procesadas: '+summary.rewards_count));
         content.appendChild(paragraph('Recompensas con objetos: '+summary.rewards_with_items_count));
         content.appendChild(paragraph('Líneas: '+summary.item_lines_count+' · Unidades: '+summary.total_quantity));
         if(summary.items&&summary.items.length){const list=document.createElement('ul');summary.items.forEach(function(item){const row=document.createElement('li');row.textContent=item.item_name+' x'+item.quantity;list.appendChild(row);});content.appendChild(list);}else content.appendChild(paragraph('No hay objetos pendientes.'));
         const note=document.createElement('p');note.className='text-secondary mb-0';note.textContent='Las recompensas se almacenarán hasta que se implemente la reclamación.';content.appendChild(note);
     }
+    function renderPendingRewardsSummary(summary){renderRewardsSummary(summary,'pending-rewards-content');}
+    function renderSessionPendingRewardsSummary(summary){renderRewardsSummary(summary,'session-pending-rewards-content');}
+    function renderInventoryItems(items,status){const content=document.getElementById('inventory-items');clearNode(content);document.getElementById('inventory-used-slots').textContent=status.current_used_slots;document.getElementById('inventory-free-slots').textContent=status.current_free_slots;document.getElementById('inventory-effective-capacity').textContent=status.effective_capacity;if(!items||items.length===0){content.appendChild(paragraph('Tu inventario está vacío'));return;}items.forEach(function(item){const row=document.createElement('div');row.className='d-flex justify-content-between border-bottom py-2';const identity=document.createElement('span');identity.textContent=item.item_name+' · '+item.item_code;const quantity=document.createElement('strong');quantity.textContent='x'+item.quantity+' · '+item.used_slots+' slots · stack '+item.max_stack;row.appendChild(identity);row.appendChild(quantity);content.appendChild(row);});}
+    function updateClaimButton(summary,requestState){const form=document.getElementById('claim-rewards-form'),button=form.querySelector('button'),hasPending=summary&&Number(summary.rewards_count)>0;form.classList.toggle('d-none',!hasPending);document.getElementById('claim-empty-message').textContent=hasPending?'':'No tienes recompensas pendientes';button.disabled=requestState==='loading';button.textContent=requestState==='loading'?'Reclamando…':'Reclamar todas';}
     function renderInventoryCapacity(capacity){
         if(!capacity)return;const content=document.getElementById('inventory-capacity-content');clearNode(content);
         content.appendChild(paragraph('Capacidad efectiva: '+capacity.effective_capacity));
@@ -99,7 +108,7 @@
         if(processed)renderLatestHunt(processed,true);else if(lastRenderedProcessedHuntId===null)renderLatestHunt(state.latest_hunt,false);
         if(processed&&isNew)startPlayback(processed,state.generated_reward,state.server_time);else if(!playback&&state.latest_hunt)startPlayback(state.latest_hunt,state.latest_hunt.historical_reward,state.server_time);
         if(processed&&isNew)lastRenderedProcessedHuntId=Number(processed.hunt_id);
-        renderPendingRewardsSummary(state.pending_rewards_summary);
+        renderSessionPendingRewardsSummary(state.session_pending_rewards_summary);renderPendingRewardsSummary(state.character_pending_rewards_summary);updateClaimButton(state.character_pending_rewards_summary,'idle');
         renderInventoryCapacity(state.inventory_capacity);
         document.getElementById('countdown').textContent=state.seconds_until_next_encounter===null?'Detenido':state.seconds_until_next_encounter+' s';
         const stop=document.getElementById('stop-message');stop.textContent='';
@@ -124,17 +133,19 @@
         if(requestInFlight||stopRequested)return;requestInFlight=true;clearTimer();
         try{const response=await fetch(root.dataset.tickUrl,{method:'POST',headers:{'X-CSRF-TOKEN':token,'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}});if(!response.ok)throw new Error();const state=await response.json();render(state);if(stopRequested)completeCurrentPlaybackImmediately();else schedule(delayFor(state));}
         catch(error){if(!stopRequested)schedule(5000);}
-        finally{requestInFlight=false;if(stopRequested)sendStop();}
+        finally{requestInFlight=false;if(stopRequested)sendStop();else if(claimRequested)claimRewards();}
     }
+    async function claimRewards(){if(claimInFlight)return;if(requestInFlight){claimRequested=true;clearTimer();return;}claimRequested=false;claimInFlight=true;clearTimer();const form=document.getElementById('claim-rewards-form');updateClaimButton(lastState.character_pending_rewards_summary,'loading');try{const response=await fetch(form.action,{method:'POST',headers:{'X-CSRF-TOKEN':token,'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}});const data=await response.json();if(!response.ok)throw data;lastState.character_pending_rewards_summary=data.character_pending_rewards_summary;renderPendingRewardsSummary(data.character_pending_rewards_summary);renderInventoryItems(data.inventory_items,data.inventory_status);renderInventoryCapacity(Object.assign({},data.inventory_status,data.pending_projection));updateClaimButton(data.character_pending_rewards_summary,'idle');document.getElementById('stop-message').textContent=data.message;}catch(error){updateClaimButton(lastState.character_pending_rewards_summary,'idle');document.getElementById('stop-message').textContent=error.message||'No se pudieron reclamar las recompensas.';}finally{claimInFlight=false;if(!stopRequested&&lastState.status==='running')schedule(delayFor(lastState));}}
     document.getElementById('skip-playback').addEventListener('click',completeCurrentPlaybackImmediately);
     document.getElementById('stop-form').addEventListener('submit',function(event){event.preventDefault();requestStop(false);});
     document.getElementById('stop-and-return').addEventListener('click',function(){requestStop(true);});
     document.getElementById('back-to-zones').addEventListener('click',function(event){if(lastState.status!=='running')return;event.preventDefault();document.getElementById('leave-confirmation').classList.remove('d-none');document.getElementById('keep-hunting').focus();});
     document.getElementById('keep-hunting').addEventListener('click',function(){document.getElementById('leave-confirmation').classList.add('d-none');document.getElementById('back-to-zones').focus();});
     document.getElementById('leave-anyway').addEventListener('click',function(){window.location.assign(root.dataset.zonesUrl);});
+    document.getElementById('claim-rewards-form').addEventListener('submit',function(event){event.preventDefault();claimRewards();});
     document.getElementById('combat-log-new-events').addEventListener('click',function(){const scroll=document.getElementById('combat-log-scroll');scroll.scrollTop=0;this.classList.add('d-none');});
     document.getElementById('combat-log-scroll').addEventListener('scroll',function(){if(this.scrollTop<=20)document.getElementById('combat-log-new-events').classList.add('d-none');});
-    render(lastState);schedule(lastState.status==='running'?250:null);
+    renderInventoryItems(initialInventory.inventory_items,initialInventory.inventory_status);render(lastState);schedule(lastState.status==='running'?250:null);
 })();
 </script>
 @endsection

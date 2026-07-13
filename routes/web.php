@@ -14,6 +14,7 @@ use App\Http\Controllers\CharacterInventoryController;
 use App\Http\Controllers\CharacterWalletController;
 use App\Http\Controllers\CharacterHuntController;
 use App\Http\Controllers\CharacterHuntingSessionController;
+use App\Http\Controllers\CharacterHuntRewardClaimController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -36,6 +37,7 @@ Route::middleware(['auth', 'game.navigation'])->group(function () {
     Route::get('/characters/{character}/hunting-sessions/{huntingSession}', [CharacterHuntingSessionController::class, 'show'])->name('characters.hunting-sessions.show');
     Route::post('/characters/{character}/hunting-sessions/{huntingSession}/tick', [CharacterHuntingSessionController::class, 'tick'])->name('characters.hunting-sessions.tick');
     Route::post('/characters/{character}/hunting-sessions/{huntingSession}/stop', [CharacterHuntingSessionController::class, 'stop'])->name('characters.hunting-sessions.stop');
+    Route::post('/characters/{character}/hunt-rewards/claim', CharacterHuntRewardClaimController::class)->name('characters.hunt-rewards.claim');
 
     Route::get('/', [DashboardController::class, 'index'])
         ->middleware('character.required')

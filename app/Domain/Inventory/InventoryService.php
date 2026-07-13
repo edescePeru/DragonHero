@@ -14,6 +14,20 @@ use InvalidArgumentException;
 
 final class InventoryService
 {
+    /** Internal authoritative batch API. Requires an active transaction and prelocked Character, Items and CharacterItems. */
+    public function addManyLocked(Character $character, Collection $items, array $quantities, Collection $existing): Collection
+    {
+        if (DB::transactionLevel() < 1) throw new \RuntimeException('Active transaction required.');
+        $entries=$existing->keyBy('item_id');if($entries->count()!==$existing->count()||$items->keyBy('id')->count()!==$items->count())throw new InvalidArgumentException('Duplicate inventory batch state.');$result=collect();
+        foreach($quantities as $itemId=>$quantity){
+            if(!is_int($itemId)||$itemId<=0||!is_int($quantity)||$quantity<=0)throw new InvalidArgumentException('Invalid normalized inventory batch.');
+            $item=$items->get($itemId);if(!$item||((int)$item->id)!==$itemId||(int)$item->max_stack<=0)throw new InvalidArgumentException('Inventory batch Item mismatch.');
+            $entry=$entries->get($itemId);if($entry&&((int)$entry->character_id!==(int)$character->id||(int)$entry->item_id!==$itemId))throw new InvalidArgumentException('Inventory batch entry mismatch.');
+            if(!$entry)$entry=new CharacterItem(['character_id'=>$character->id,'item_id'=>$itemId,'quantity'=>0,'locked_quantity'=>0]);
+            $current=(int)$entry->quantity;if($quantity>PHP_INT_MAX-$current)throw new InvalidArgumentException('Inventory quantity overflow.');$entry->quantity=$current+$quantity;$this->assertInvariants($entry);$entry->save();$result->push($this->toEntry($entry,$item));
+        }
+        return$result;
+    }
     public function addItem(Character $character, Item $item, int $quantity): InventoryEntry
     {
         $this->assertPositive($quantity);

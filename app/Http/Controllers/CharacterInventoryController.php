@@ -6,13 +6,14 @@ use Carbon\CarbonImmutable;
 use App\Domain\Media\MediaAssetType;
 use App\Models\Character;
 use App\Models\Item;
+use App\Domain\Hunts\Rewards\HuntRewardService;
+use App\Domain\Inventory\CharacterInventorySummaryService;
 class CharacterInventoryController extends Controller {
- public function index(Character $character,InventoryService $inventory,PendingRewardCapacityService $capacityService){
+ public function index(Character $character,CharacterInventorySummaryService $summaryService,HuntRewardService $rewards){
   $this->authorize('view',$character);
-  $entries=$inventory->entries($character);
-  $itemIds=$entries->map(function($entry){return $entry->itemId();})->filter(function($id){return is_int($id)&&$id>0;})->unique()->values();
+  $inventorySummary=$summaryService->snapshot($character);$itemIds=collect($inventorySummary['inventory_items'])->pluck('item_id');
   $inventoryItems=$itemIds->isEmpty()?collect():Item::query()->whereKey($itemIds)->with(['mediaAssets'=>function($query){$query->where('asset_type',MediaAssetType::ICON);}])->get()->keyBy('id');
-  $inventoryCapacity=$capacityService->snapshot($character,CarbonImmutable::now())->toArray();
-  return view('characters.inventory.index',compact('character','entries','inventoryItems','inventoryCapacity'));
+  $pendingRewardsSummary=$rewards->summaryPendingForCharacter($character);
+  return view('characters.inventory.index',compact('character','inventorySummary','inventoryItems','pendingRewardsSummary'));
  }
 }

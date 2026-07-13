@@ -108,8 +108,8 @@ class MediaAssetComponentsTest extends TestCase
         });
         $this->assertSame(1, $mediaQueries);
 
-        $entry = new InventoryEntry(999999, 'missing_item', 'Objeto ausente', 'material', 'common', 3, 0);
-        $html = view('characters.inventory.index', ['character' => $character, 'entries' => collect([$entry]), 'inventoryItems' => collect()])->render();
+        $inventorySummary=['inventory_items'=>[['item_id'=>999999,'item_code'=>'missing_item','item_name'=>'Objeto ausente','quantity'=>3,'locked_quantity'=>0,'available_quantity'=>3,'max_stack'=>99,'used_slots'=>1]],'inventory_status'=>['effective_capacity'=>30,'current_used_slots'=>1,'current_free_slots'=>29],'pending_projection'=>['projected_used_slots'=>1,'projected_free_slots'=>29,'claim_fits'=>true,'missing_slots_for_claim'=>0,'effective_reserve'=>5,'hunting_can_continue'=>true]];
+        $html = view('characters.inventory.index', ['character' => $character, 'inventorySummary' => $inventorySummary, 'inventoryItems' => collect()])->render();
         $this->assertStringContainsString('Objeto ausente', $html);
         $this->assertStringContainsString('data-media-state="not-loaded"', $html);
     }
