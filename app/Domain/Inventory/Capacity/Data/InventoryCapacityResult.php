@@ -1,0 +1,3 @@
+<?php
+namespace App\Domain\Inventory\Capacity\Data;
+final class InventoryCapacityResult{private $data;public function __construct(array $data){$this->data=$data;}public function toArray(){return array_merge([],$this->data);}public function effectiveCapacity(){return$this->data['effective_capacity'];}public function huntingCanContinue(){return$this->data['hunting_can_continue'];}public function claimFits(){return$this->data['claim_fits'];}public function currentUsedSlots(){return$this->data['current_used_slots'];}public function projectedUsedSlots(){return$this->data['projected_used_slots'];}public function effectiveReserve(){return$this->data['effective_reserve'];}public function missingSlotsForClaim(){return$this->data['missing_slots_for_claim'];}}

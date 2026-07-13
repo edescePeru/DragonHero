@@ -172,3 +172,6 @@ Las cacerías manuales pueden resolver un encuentro 1 contra N; la ejecución co
 - monetización y economía externa.
 
 Estos sistemas permanecen como visión futura y requerirán documentos de diseño e incrementos específicos antes de su implementación.
+# Capacidad de inventario
+
+La fase actual deriva slots desde cantidades agregadas y `max_stack`, contempla mejoras permanentes y eventos temporales, y reserva margen para recompensas pendientes. No existe todavía transferencia ni reclamación.

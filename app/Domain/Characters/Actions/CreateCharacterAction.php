@@ -3,6 +3,7 @@
 namespace App\Domain\Characters\Actions;
 
 use App\Domain\Characters\CharacterStatus;
+use App\Domain\Inventory\Capacity\InventoryCapacityLimits;
 use App\Models\Character;
 use App\Models\User;
 use Illuminate\Database\QueryException;
@@ -38,6 +39,7 @@ class CreateCharacterAction
                 $character->base_evasion = 5;
                 $character->base_critical_rate = '5.00';
                 $character->status = CharacterStatus::ACTIVE;
+                $character->base_inventory_slots = InventoryCapacityLimits::DEFAULT_BASE_SLOTS;
 
                 $lockedUser->characters()->save($character);
 

@@ -1,0 +1,92 @@
+<?php
+namespace Tests\Feature;
+
+use App\Domain\Combat\CombatResultStatus;
+use App\Domain\Hunts\Sessions\HuntingSessionService;
+use App\Domain\Hunts\Sessions\HuntingSessionStopReason;
+use App\Models\Character;
+use App\Models\CharacterItem;
+use App\Models\Hunt;
+use App\Models\HuntReward;
+use App\Models\HuntingSession;
+use App\Models\Item;
+use App\Models\Monster;
+use App\Models\MonsterLootEntry;
+use App\Models\User;
+use App\Models\Zone;
+use Carbon\CarbonImmutable;
+use Database\Seeders\WorldCatalogSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class HuntingSessionVisualUpdateTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(WorldCatalogSeeder::class);
+        CarbonImmutable::setTestNow('2026-07-12 12:00:00');
+    }
+
+    protected function tearDown(): void
+    {
+        CarbonImmutable::setTestNow();
+        parent::tearDown();
+    }
+
+    private function zone(){return Zone::where('code','grey_oak_forest')->firstOrFail();}
+    private function player(array $attributes=[]){return Character::factory()->for(User::factory())->create($attributes+['base_attack'=>500]);}
+
+    public function test_victory_returns_matching_processed_hunt_reward_and_fresh_summary()
+    {
+        MonsterLootEntry::query()->update(['drop_chance_basis_points'=>10000,'minimum_quantity'=>1,'maximum_quantity'=>1]);
+        $character=$this->player();$service=app(HuntingSessionService::class);$session=HuntingSession::find($service->start($character,$this->zone())->id());
+        $tick=$service->tick($character,$session)->toArray();
+        $this->assertSame(CombatResultStatus::CHARACTER_VICTORY,$tick['processed_hunt']['status']);
+        $this->assertSame($tick['processed_hunt']['hunt_id'],$tick['generated_reward']['hunt_id']);
+        $this->assertSame(1,$tick['pending_rewards_summary']['rewards_count']);
+        $this->assertNotNull($tick['inventory_capacity']);
+    }
+
+    public function test_early_and_timeout_ticks_have_no_processed_event_or_reward()
+    {
+        $character=$this->player();$service=app(HuntingSessionService::class);$session=HuntingSession::find($service->start($character,$this->zone())->id());$first=$service->tick($character,$session)->toArray();$rewardCount=HuntReward::count();
+        $early=$service->tick($character,$session)->toArray();
+        $this->assertNull($early['processed_hunt']);$this->assertNull($early['generated_reward']);$this->assertSame($first['pending_rewards_summary'],$early['pending_rewards_summary']);$this->assertSame($rewardCount,HuntReward::count());$this->assertNotNull($early['inventory_capacity']);
+        $expired=HuntingSession::factory()->for($character)->create(['zone_id'=>$this->zone()->id,'last_heartbeat_at'=>CarbonImmutable::now()->subSeconds(31),'next_encounter_at'=>CarbonImmutable::now()->subHour()]);
+        $timeout=$service->tick($character,$expired)->toArray();$this->assertSame(HuntingSessionStopReason::HEARTBEAT_TIMEOUT,$timeout['stop_reason']);$this->assertNull($timeout['processed_hunt']);$this->assertNull($timeout['generated_reward']);
+    }
+
+    public function test_empty_reward_is_returned_immediately_and_not_duplicated()
+    {
+        MonsterLootEntry::query()->update(['drop_chance_basis_points'=>1]);$character=$this->player();$service=app(HuntingSessionService::class);$session=HuntingSession::find($service->start($character,$this->zone())->id());$first=$service->tick($character,$session)->toArray();
+        $this->assertSame(0,$first['generated_reward']['item_lines_count']);$this->assertSame([],$first['generated_reward']['items']);$this->assertSame(1,$first['pending_rewards_summary']['rewards_count']);
+        $second=$service->tick($character,$session)->toArray();$this->assertNull($second['processed_hunt']);$this->assertNull($second['generated_reward']);$this->assertSame(1,HuntReward::count());
+    }
+
+    public function test_draw_and_defeat_never_return_generated_reward()
+    {
+        Monster::query()->update(['attack'=>0,'accuracy_rate'=>0,'max_health'=>1000000]);$drawCharacter=$this->player(['base_attack'=>0,'base_accuracy'=>0,'base_max_health'=>1000000,'current_health'=>1000000]);$service=app(HuntingSessionService::class);$drawSession=HuntingSession::find($service->start($drawCharacter,$this->zone())->id());$draw=$service->tick($drawCharacter,$drawSession)->toArray();$this->assertSame(CombatResultStatus::DRAW,$draw['processed_hunt']['status']);$this->assertNull($draw['generated_reward']);
+        Monster::query()->update(['attack'=>10000,'accuracy_rate'=>100]);$defeated=$this->player(['current_health'=>1,'base_attack'=>0,'base_accuracy'=>0]);$defeatSession=HuntingSession::find($service->start($defeated,$this->zone())->id());$defeat=$service->tick($defeated,$defeatSession)->toArray();$this->assertSame(CombatResultStatus::MONSTER_VICTORY,$defeat['processed_hunt']['status']);$this->assertNull($defeat['generated_reward']);
+    }
+
+    public function test_show_is_historical_and_script_updates_safe_separate_blocks()
+    {
+        $character=$this->player();$service=app(HuntingSessionService::class);$session=HuntingSession::find($service->start($character,$this->zone())->id());$service->tick($character,$session);$show=$service->show($character,$session)->toArray();$this->assertNotNull($show['latest_hunt']);$this->assertNull($show['processed_hunt']);$this->assertNull($show['generated_reward']);
+        $response=$this->actingAs($character->user)->get(route('characters.hunting-sessions.show',[$character,$session]));
+        $response->assertOk()->assertSee('function renderLatestHunt',false)->assertSee('function renderGeneratedReward',false)->assertSee('function renderPendingRewardsSummary',false)->assertSee('function renderInventoryCapacity',false)->assertSee('lastRenderedProcessedHuntId',false)->assertSee('Math.min(10000',false)->assertSee('document.createElement',false)->assertSee('textContent',false)->assertDontSee('innerHTML',false)->assertDontSee('insertAdjacentHTML',false);
+        $response->assertSee('combat-log-scroll',false)->assertSee('height:26rem',false)->assertSee('overflow-y:auto',false)->assertSee('overflow-x:hidden',false)->assertSee('aria-live="polite"',false)->assertSee('.prepend(node)',false)->assertSee('scrollTop<=20',false)->assertSee('Nuevos eventos',false)->assertSee('combat-log-entry--critical',false)->assertSee('combat-log-entry--miss',false)->assertSee('combat-log-entry--result',false)->assertSee('combat-log-entry--loot',false);
+    }
+
+    public function test_victory_reward_remains_in_response_when_capacity_stops_same_tick()
+    {
+        MonsterLootEntry::query()->update(['drop_chance_basis_points'=>10000,'minimum_quantity'=>1,'maximum_quantity'=>1]);
+        $character=$this->player();
+        $single=Item::create(['code'=>'capacity_marker','name'=>'Capacity marker','item_type'=>'material','rarity'=>'common','is_stackable'=>false,'max_stack'=>1,'status'=>'active']);
+        CharacterItem::create(['character_id'=>$character->id,'item_id'=>$single->id,'quantity'=>25,'locked_quantity'=>0]);
+        $service=app(HuntingSessionService::class);$session=HuntingSession::find($service->start($character,$this->zone())->id());$tick=$service->tick($character,$session)->toArray();
+        $this->assertSame('stopped',$tick['status']);$this->assertSame(HuntingSessionStopReason::PENDING_INVENTORY_CAPACITY,$tick['stop_reason']);$this->assertNotNull($tick['processed_hunt']);$this->assertNotNull($tick['generated_reward']);$this->assertSame($tick['processed_hunt']['hunt_id'],$tick['generated_reward']['hunt_id']);
+    }
+}

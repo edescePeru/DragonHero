@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Domain\Characters\CharacterStatus;
+use App\Domain\Inventory\Capacity\InventoryCapacityLimits;
 use App\Models\Character;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -26,6 +27,7 @@ class CharacterFactory extends Factory
             'base_evasion' => 5,
             'base_critical_rate' => '5.00',
             'status' => CharacterStatus::ACTIVE,
+            'base_inventory_slots' => InventoryCapacityLimits::DEFAULT_BASE_SLOTS,
         ];
     }
 }

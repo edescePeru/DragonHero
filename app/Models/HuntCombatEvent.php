@@ -1,0 +1,2 @@
+<?php
+namespace App\Models;use Illuminate\Database\Eloquent\Model;class HuntCombatEvent extends Model{protected $guarded=[];protected $casts=['sequence'=>'integer','round'=>'integer','did_hit'=>'boolean','hit_probability'=>'integer','hit_roll'=>'integer','critical_probability'=>'integer','critical_roll'=>'integer','is_critical'=>'boolean','damage'=>'integer','healing'=>'integer','target_health_before'=>'integer','target_health_after'=>'integer','playback_offset_ms'=>'integer','playback_duration_ms'=>'integer'];public function hunt(){return$this->belongsTo(Hunt::class);}}

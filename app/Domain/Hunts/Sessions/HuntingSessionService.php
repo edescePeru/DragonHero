@@ -1,13 +1,223 @@
 <?php
 namespace App\Domain\Hunts\Sessions;
-use App\Domain\Combat\CombatResultStatus;use App\Domain\Hunts\Data\HuntResult;use App\Domain\Hunts\Exceptions\InvalidHuntingZoneException;use App\Domain\Hunts\Exceptions\NoEligibleMonsterException;use App\Domain\Hunts\HuntService;use App\Domain\Hunts\Rewards\HuntRewardService;use App\Domain\Hunts\Sessions\Data\HuntExecutionContext;use App\Domain\Hunts\Sessions\Data\HuntingSessionResult;use App\Domain\Hunts\Sessions\Data\HuntingSessionTickResult;use App\Domain\Hunts\Sessions\Exceptions\ActiveHuntingSessionExistsException;use App\Domain\Hunts\Sessions\Exceptions\HuntingSessionOwnershipException;use App\Domain\WorldCatalog\CatalogStatus;use App\Models\Character;use App\Models\HuntingSession;use App\Models\Zone;use App\Models\ZoneEncounterSize;use App\Models\ZoneMonster;use Carbon\CarbonImmutable;use Illuminate\Support\Facades\DB;
-final class HuntingSessionService{private $hunts;private $rewards;private $generatedReward;public function __construct(HuntService $hunts,HuntRewardService $rewards){$this->hunts=$hunts;$this->rewards=$rewards;$this->generatedReward=null;}
- public function start(Character $character,Zone $zone):HuntingSessionResult{return DB::transaction(function()use($character,$zone){$now=CarbonImmutable::now();$c=Character::whereKey($character->id)->lockForUpdate()->firstOrFail();$running=HuntingSession::where('character_id',$c->id)->where('status',HuntingSessionStatus::RUNNING)->lockForUpdate()->get();foreach($running as $old){if($this->heartbeatExpired($old,$now))$this->stopLocked($old,HuntingSessionStopReason::HEARTBEAT_TIMEOUT,$now);else throw new ActiveHuntingSessionExistsException('El personaje ya tiene una sesión activa.');}$z=Zone::whereKey($zone->id)->firstOrFail();if(!$this->characterAvailable($c)||!$this->zoneAvailable($z,$c))throw new InvalidHuntingZoneException('La zona no está disponible para cacería conectada.');$session=HuntingSession::create(['character_id'=>$c->id,'zone_id'=>$z->id,'mode'=>HuntingSessionMode::CONNECTED,'status'=>HuntingSessionStatus::RUNNING,'stop_reason'=>null,'consecutive_defeats'=>0,'hunts_count'=>0,'victories_count'=>0,'defeats_count'=>0,'draws_count'=>0,'next_encounter_at'=>$now,'last_heartbeat_at'=>$now,'started_at'=>$now,'stopped_at'=>null]);return$this->result($session,$now,null);},3);}
- public function show(Character $character,HuntingSession $session):HuntingSessionResult{$this->assertOwnership($character,$session);return$this->result($session,CarbonImmutable::now(),$this->latestHunt($session));}
- public function tick(Character $character,HuntingSession $session):HuntingSessionTickResult{return DB::transaction(function()use($character,$session){$c=Character::whereKey($character->id)->lockForUpdate()->firstOrFail();$s=HuntingSession::whereKey($session->id)->lockForUpdate()->firstOrFail();$this->assertOwnership($c,$s);$now=CarbonImmutable::now();if($s->status===HuntingSessionStatus::STOPPED)return new HuntingSessionTickResult($this->result($s,$now,$this->latestHunt($s))->toArray());if($this->heartbeatExpired($s,$now)){$this->stopLocked($s,HuntingSessionStopReason::HEARTBEAT_TIMEOUT,$now);return new HuntingSessionTickResult($this->result($s,$now,$this->latestHunt($s))->toArray());}if(!$this->characterAvailable($c)){$this->stopLocked($s,HuntingSessionStopReason::CHARACTER_UNAVAILABLE,$now);return new HuntingSessionTickResult($this->result($s,$now,$this->latestHunt($s))->toArray());}$zone=Zone::whereKey($s->zone_id)->first();if(!$zone||!$this->basicZoneAvailable($zone)){$this->stopLocked($s,HuntingSessionStopReason::ZONE_UNAVAILABLE,$now);return new HuntingSessionTickResult($this->result($s,$now,$this->latestHunt($s))->toArray());}$s->last_heartbeat_at=$now;$s->save();if($s->next_encounter_at&&$now->lt(CarbonImmutable::instance($s->next_encounter_at)))return new HuntingSessionTickResult($this->result($s,$now,$this->latestHunt($s))->toArray());try{$hunt=$this->hunts->startForLockedSession($c,$zone,new HuntExecutionContext($s->id));}catch(InvalidHuntingZoneException $e){$this->stopLocked($s,HuntingSessionStopReason::ZONE_UNAVAILABLE,$now);return new HuntingSessionTickResult($this->result($s,$now,$this->latestHunt($s))->toArray());}catch(NoEligibleMonsterException $e){$this->stopLocked($s,HuntingSessionStopReason::ZONE_UNAVAILABLE,$now);return new HuntingSessionTickResult($this->result($s,$now,$this->latestHunt($s))->toArray());}catch(\App\Domain\Hunts\Exceptions\NoActiveEncounterSizeException $e){$this->stopLocked($s,HuntingSessionStopReason::ZONE_UNAVAILABLE,$now);return new HuntingSessionTickResult($this->result($s,$now,$this->latestHunt($s))->toArray());}$this->applyHunt($s,$hunt,$now);$s->save();return new HuntingSessionTickResult($this->result($s,$now,$hunt)->toArray());},3);}
- public function stop(Character $character,HuntingSession $session):HuntingSessionResult{return DB::transaction(function()use($character,$session){$now=CarbonImmutable::now();$c=Character::whereKey($character->id)->lockForUpdate()->firstOrFail();$s=HuntingSession::whereKey($session->id)->lockForUpdate()->firstOrFail();$this->assertOwnership($c,$s);if($s->status===HuntingSessionStatus::RUNNING)$this->stopLocked($s,HuntingSessionStopReason::USER_STOPPED,$now);return$this->result($s,$now,$this->latestHunt($s));},3);}
- private function applyHunt(HuntingSession $s,HuntResult $hunt,CarbonImmutable $now){$s->hunts_count++;if($hunt->status()===CombatResultStatus::CHARACTER_VICTORY){$this->generatedReward=$this->rewards->generatePendingForLockedHunt($hunt->huntId(),$s->id);$s->victories_count++;$s->consecutive_defeats=0;$s->next_encounter_at=$now->addSeconds(HuntingSessionLimits::VICTORY_COOLDOWN_SECONDS);}elseif($hunt->status()===CombatResultStatus::MONSTER_VICTORY){$s->defeats_count++;$this->applyNonWin($s,$now);}elseif($hunt->status()===CombatResultStatus::DRAW){$s->draws_count++;$this->applyNonWin($s,$now);}else throw new \RuntimeException('Unexpected Hunt status.');if($s->hunts_count!==$s->victories_count+$s->defeats_count+$s->draws_count)throw new \RuntimeException('Hunting session counter invariant failed.');}
- private function applyNonWin(HuntingSession $s,CarbonImmutable $now){$s->consecutive_defeats++;if($s->consecutive_defeats>=HuntingSessionLimits::MAX_CONSECUTIVE_DEFEATS){$this->stopLocked($s,HuntingSessionStopReason::CONSECUTIVE_DEFEATS,$now);return;}$seconds=$s->consecutive_defeats===1?HuntingSessionLimits::FIRST_DEFEAT_COOLDOWN_SECONDS:HuntingSessionLimits::SECOND_DEFEAT_COOLDOWN_SECONDS;$s->next_encounter_at=$now->addSeconds($seconds);}
- private function heartbeatExpired(HuntingSession $s,CarbonImmutable $now){return$now->gt(CarbonImmutable::instance($s->last_heartbeat_at)->addSeconds(HuntingSessionLimits::CONNECTED_HEARTBEAT_TIMEOUT_SECONDS));}private function stopLocked(HuntingSession $s,$reason,CarbonImmutable $now){$s->status=HuntingSessionStatus::STOPPED;$s->stop_reason=$reason;$s->stopped_at=$now;$s->next_encounter_at=null;$s->save();}private function characterAvailable(Character $c){return$c->status==='active';}private function basicZoneAvailable(Zone $z){return$z->status===CatalogStatus::ACTIVE&&(bool)$z->allows_hunting;}private function zoneAvailable(Zone $z,Character $c){if(!$this->basicZoneAvailable($z))return false;if(!ZoneEncounterSize::where('zone_id',$z->id)->where('is_active',true)->exists())return false;return ZoneMonster::where('zone_id',$z->id)->where('status',CatalogStatus::ACTIVE)->where('minimum_character_level','<=',$c->level)->whereHas('monster',function($q){$q->where('status',CatalogStatus::ACTIVE);})->exists();}private function assertOwnership(Character $c,HuntingSession $s){if((int)$s->character_id!==(int)$c->id)throw new HuntingSessionOwnershipException('Session does not belong to Character.');}
- private function latestHunt(HuntingSession $s){$hunt=$s->hunts()->with('enemies')->latest()->first();if(!$hunt)return null;return['hunt_id'=>$hunt->id,'status'=>$hunt->status,'rounds_count'=>$hunt->rounds_count,'enemy_count'=>$hunt->enemy_count,'character_health_before'=>$hunt->character_health_before,'character_health_after'=>$hunt->character_health_after,'enemies'=>$hunt->enemies->map(function($e){return['position'=>$e->position,'identifier'=>$e->instance_identifier,'monster_name'=>$e->monster_name_snapshot,'initial_health'=>$e->initial_health,'final_health'=>$e->final_health,'status'=>$e->status];})->all()];}
- private function result(HuntingSession $s,CarbonImmutable $now,$latest){$next=$s->next_encounter_at?CarbonImmutable::instance($s->next_encounter_at):null;$seconds=$next?max(0,$now->diffInSeconds($next,false)):null;$generated=$this->generatedReward?$this->generatedReward->toArray():null;$this->generatedReward=null;return new HuntingSessionResult(['session_id'=>$s->id,'status'=>$s->status,'stop_reason'=>$s->stop_reason,'server_time'=>$now->toIso8601String(),'next_encounter_at'=>$next?$next->toIso8601String():null,'seconds_until_next_encounter'=>$seconds,'consecutive_defeats'=>$s->consecutive_defeats,'hunts_count'=>$s->hunts_count,'victories_count'=>$s->victories_count,'defeats_count'=>$s->defeats_count,'draws_count'=>$s->draws_count,'latest_hunt'=>$latest,'generated_reward'=>$generated,'pending_rewards_summary'=>$this->rewards->summary($s->id)]);}}
+
+use App\Domain\Combat\CombatResultStatus;
+use App\Domain\Hunts\Data\HuntResult;
+use App\Domain\Hunts\Exceptions\InvalidHuntingZoneException;
+use App\Domain\Hunts\Exceptions\NoActiveEncounterSizeException;
+use App\Domain\Hunts\Exceptions\NoEligibleMonsterException;
+use App\Domain\Hunts\HuntService;
+use App\Domain\Hunts\Playback\HuntingPlaybackCalculator;
+use App\Domain\Hunts\Rewards\HuntRewardService;
+use App\Domain\Hunts\Sessions\Data\HuntExecutionContext;
+use App\Domain\Hunts\Sessions\Data\HuntingSessionResult;
+use App\Domain\Hunts\Sessions\Data\HuntingSessionTickResult;
+use App\Domain\Hunts\Sessions\Exceptions\ActiveHuntingSessionExistsException;
+use App\Domain\Hunts\Sessions\Exceptions\HuntingSessionOwnershipException;
+use App\Domain\Inventory\Capacity\Exceptions\InsufficientPendingRewardCapacityException;
+use App\Domain\Inventory\Capacity\PendingRewardCapacityService;
+use App\Domain\WorldCatalog\CatalogStatus;
+use App\Models\Character;
+use App\Models\HuntingSession;
+use App\Models\Zone;
+use App\Models\ZoneEncounterSize;
+use App\Models\ZoneMonster;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
+
+final class HuntingSessionService
+{
+    private $hunts;
+    private $rewards;
+    private $capacity;
+    private $generatedReward;
+    private $resultCapacity;
+    private $playback;
+
+    public function __construct(HuntService $hunts, HuntRewardService $rewards, PendingRewardCapacityService $capacity, HuntingPlaybackCalculator $playback)
+    {
+        $this->hunts = $hunts;
+        $this->rewards = $rewards;
+        $this->capacity = $capacity;
+        $this->playback = $playback;
+    }
+
+    public function start(Character $character, Zone $zone): HuntingSessionResult
+    {
+        return DB::transaction(function () use ($character, $zone) {
+            $now = CarbonImmutable::now();
+            $lockedCharacter = Character::whereKey($character->id)->lockForUpdate()->firstOrFail();
+            $running = HuntingSession::where('character_id', $lockedCharacter->id)->where('status', HuntingSessionStatus::RUNNING)->lockForUpdate()->get();
+            foreach ($running as $old) {
+                if ($this->heartbeatExpired($old, $now)) {
+                    $this->stopLocked($old, HuntingSessionStopReason::HEARTBEAT_TIMEOUT, $now);
+                } else {
+                    throw new ActiveHuntingSessionExistsException('El personaje ya tiene una sesión activa.');
+                }
+            }
+            $lockedZone = Zone::whereKey($zone->id)->firstOrFail();
+            if (!$this->characterAvailable($lockedCharacter) || !$this->zoneAvailable($lockedZone, $lockedCharacter)) {
+                throw new InvalidHuntingZoneException('La zona no está disponible para cacería conectada.');
+            }
+            $this->resultCapacity = $this->capacity->locked($lockedCharacter, $now);
+            if (!$this->resultCapacity->huntingCanContinue()) {
+                throw new InsufficientPendingRewardCapacityException($this->resultCapacity);
+            }
+            $session = HuntingSession::create(['character_id' => $lockedCharacter->id, 'zone_id' => $lockedZone->id, 'mode' => HuntingSessionMode::CONNECTED, 'status' => HuntingSessionStatus::RUNNING, 'stop_reason' => null, 'consecutive_defeats' => 0, 'hunts_count' => 0, 'victories_count' => 0, 'defeats_count' => 0, 'draws_count' => 0, 'next_encounter_at' => $now, 'last_heartbeat_at' => $now, 'started_at' => $now, 'stopped_at' => null]);
+            return $this->result($session, $now, null, null);
+        }, 3);
+    }
+
+    public function show(Character $character, HuntingSession $session): HuntingSessionResult
+    {
+        $this->assertOwnership($character, $session);
+        $now = CarbonImmutable::now();
+        $this->resultCapacity = $this->capacity->snapshot($character, $now);
+        return $this->result($session, $now, $this->latestHunt($session), null);
+    }
+
+    public function tick(Character $character, HuntingSession $session): HuntingSessionTickResult
+    {
+        return DB::transaction(function () use ($character, $session) {
+            $lockedCharacter = Character::whereKey($character->id)->lockForUpdate()->firstOrFail();
+            $lockedSession = HuntingSession::whereKey($session->id)->lockForUpdate()->firstOrFail();
+            $this->assertOwnership($lockedCharacter, $lockedSession);
+            $now = CarbonImmutable::now();
+            if ($lockedSession->status === HuntingSessionStatus::STOPPED) return $this->tickWithoutHunt($lockedCharacter, $lockedSession, $now);
+            if ($this->heartbeatExpired($lockedSession, $now)) {
+                $this->stopLocked($lockedSession, HuntingSessionStopReason::HEARTBEAT_TIMEOUT, $now);
+                return $this->tickWithoutHunt($lockedCharacter, $lockedSession, $now);
+            }
+            if (!$this->characterAvailable($lockedCharacter)) {
+                $this->stopLocked($lockedSession, HuntingSessionStopReason::CHARACTER_UNAVAILABLE, $now);
+                return $this->tickWithoutHunt($lockedCharacter, $lockedSession, $now);
+            }
+            $zone = Zone::whereKey($lockedSession->zone_id)->first();
+            if (!$zone || !$this->basicZoneAvailable($zone)) {
+                $this->stopLocked($lockedSession, HuntingSessionStopReason::ZONE_UNAVAILABLE, $now);
+                return $this->tickWithoutHunt($lockedCharacter, $lockedSession, $now);
+            }
+            $lockedSession->last_heartbeat_at = $now;
+            $lockedSession->save();
+            if ($lockedSession->next_encounter_at && $now->lt(CarbonImmutable::instance($lockedSession->next_encounter_at))) {
+                return $this->tickWithoutHunt($lockedCharacter, $lockedSession, $now);
+            }
+            $this->resultCapacity = $this->capacity->locked($lockedCharacter, $now);
+            if (!$this->resultCapacity->huntingCanContinue()) {
+                $this->stopLocked($lockedSession, HuntingSessionStopReason::PENDING_INVENTORY_CAPACITY, $now);
+                return $this->tickWithoutHunt($lockedCharacter, $lockedSession, $now);
+            }
+            try {
+                $hunt = $this->hunts->startForLockedSession($lockedCharacter, $zone, new HuntExecutionContext($lockedSession->id));
+            } catch (InvalidHuntingZoneException $exception) {
+                return $this->stopForZone($lockedCharacter, $lockedSession, $now);
+            } catch (NoEligibleMonsterException $exception) {
+                return $this->stopForZone($lockedCharacter, $lockedSession, $now);
+            } catch (NoActiveEncounterSizeException $exception) {
+                return $this->stopForZone($lockedCharacter, $lockedSession, $now);
+            }
+            $victory = $this->applyHunt($lockedSession, $hunt, $now);
+            if ($victory) {
+                $this->resultCapacity = $this->capacity->locked($lockedCharacter, $now);
+                if (!$this->resultCapacity->huntingCanContinue()) $this->stopLocked($lockedSession, HuntingSessionStopReason::PENDING_INVENTORY_CAPACITY, $now);
+            }
+            $lockedSession->save();
+            $processedHunt = $this->latestHunt($lockedSession);
+            return new HuntingSessionTickResult($this->result($lockedSession, $now, $processedHunt, $processedHunt)->toArray());
+        }, 3);
+    }
+
+    public function stop(Character $character, HuntingSession $session): HuntingSessionResult
+    {
+        return DB::transaction(function () use ($character, $session) {
+            $now = CarbonImmutable::now();
+            $lockedCharacter = Character::whereKey($character->id)->lockForUpdate()->firstOrFail();
+            $lockedSession = HuntingSession::whereKey($session->id)->lockForUpdate()->firstOrFail();
+            $this->assertOwnership($lockedCharacter, $lockedSession);
+            if ($lockedSession->status === HuntingSessionStatus::RUNNING) $this->stopLocked($lockedSession, HuntingSessionStopReason::USER_STOPPED, $now);
+            $this->resultCapacity = $this->capacity->locked($lockedCharacter, $now);
+            return $this->result($lockedSession, $now, $this->latestHunt($lockedSession), null);
+        }, 3);
+    }
+
+    private function tickWithoutHunt(Character $character, HuntingSession $session, CarbonImmutable $now)
+    {
+        if ($this->resultCapacity === null) $this->resultCapacity = $this->capacity->locked($character, $now);
+        return new HuntingSessionTickResult($this->result($session, $now, $this->latestHunt($session), null)->toArray());
+    }
+
+    private function stopForZone(Character $character, HuntingSession $session, CarbonImmutable $now)
+    {
+        $this->stopLocked($session, HuntingSessionStopReason::ZONE_UNAVAILABLE, $now);
+        return $this->tickWithoutHunt($character, $session, $now);
+    }
+
+    private function applyHunt(HuntingSession $session, HuntResult $hunt, CarbonImmutable $now)
+    {
+        $session->hunts_count++;
+        $victory = false;
+        if ($hunt->status() === CombatResultStatus::CHARACTER_VICTORY) {
+            $this->generatedReward = $this->rewards->generatePendingForLockedHunt($hunt->huntId(), $session->id);
+            $session->victories_count++;
+            $session->consecutive_defeats = 0;
+            $session->next_encounter_at = $now->addSeconds($this->effectiveWaitSeconds(HuntingSessionLimits::VICTORY_COOLDOWN_SECONDS, $hunt->playbackDurationMs()));
+            $victory = true;
+        } elseif ($hunt->status() === CombatResultStatus::MONSTER_VICTORY) {
+            $session->defeats_count++;
+            $this->applyNonWin($session, $hunt, $now);
+        } elseif ($hunt->status() === CombatResultStatus::DRAW) {
+            $session->draws_count++;
+            $this->applyNonWin($session, $hunt, $now);
+        } else {
+            throw new \RuntimeException('Unexpected Hunt status.');
+        }
+        if ($session->hunts_count !== $session->victories_count + $session->defeats_count + $session->draws_count) throw new \RuntimeException('Hunting session counter invariant failed.');
+        return $victory;
+    }
+
+    private function applyNonWin(HuntingSession $session, HuntResult $hunt, CarbonImmutable $now)
+    {
+        $session->consecutive_defeats++;
+        if ($session->consecutive_defeats >= HuntingSessionLimits::MAX_CONSECUTIVE_DEFEATS) {
+            $this->stopLocked($session, HuntingSessionStopReason::CONSECUTIVE_DEFEATS, $now);
+            return;
+        }
+        $seconds = $session->consecutive_defeats === 1 ? HuntingSessionLimits::FIRST_DEFEAT_COOLDOWN_SECONDS : HuntingSessionLimits::SECOND_DEFEAT_COOLDOWN_SECONDS;
+        $session->next_encounter_at = $now->addSeconds($this->effectiveWaitSeconds($seconds, $hunt->playbackDurationMs()));
+    }
+
+    private function effectiveWaitSeconds($cooldownSeconds, $playbackMilliseconds)
+    {
+        return max((int) $cooldownSeconds, $this->playback->millisecondsToCeilingSeconds((int) $playbackMilliseconds));
+    }
+
+    private function heartbeatExpired(HuntingSession $session, CarbonImmutable $now){return $now->gt(CarbonImmutable::instance($session->last_heartbeat_at)->addSeconds(HuntingSessionLimits::CONNECTED_HEARTBEAT_TIMEOUT_SECONDS));}
+    private function stopLocked(HuntingSession $session, $reason, CarbonImmutable $now){$session->status=HuntingSessionStatus::STOPPED;$session->stop_reason=$reason;$session->stopped_at=$now;$session->next_encounter_at=null;$session->save();}
+    private function characterAvailable(Character $character){return $character->status === 'active';}
+    private function basicZoneAvailable(Zone $zone){return $zone->status === CatalogStatus::ACTIVE && (bool) $zone->allows_hunting;}
+    private function zoneAvailable(Zone $zone, Character $character){if(!$this->basicZoneAvailable($zone))return false;if(!ZoneEncounterSize::where('zone_id',$zone->id)->where('is_active',true)->exists())return false;return ZoneMonster::where('zone_id',$zone->id)->where('status',CatalogStatus::ACTIVE)->where('minimum_character_level','<=',$character->level)->whereHas('monster',function($query){$query->where('status',CatalogStatus::ACTIVE);})->exists();}
+    private function assertOwnership(Character $character, HuntingSession $session){if((int)$session->character_id !== (int)$character->id)throw new HuntingSessionOwnershipException('Session does not belong to Character.');}
+
+    private function latestHunt(HuntingSession $session)
+    {
+        $hunt = $session->hunts()->with(['enemies','combatEvents','reward.items'])->latest()->first();
+        if (!$hunt) return null;
+        $participants=[['identifier'=>'character:'.$hunt->character_id,'side'=>'players','display_name'=>$hunt->character_name,'initial_health'=>$hunt->character_health_before,'final_health'=>$hunt->character_health_after,'status'=>$hunt->character_health_after>0?'alive':'defeated']];
+        foreach($hunt->enemies as $enemy)$participants[]=['identifier'=>$enemy->instance_identifier,'side'=>'enemies','display_name'=>$enemy->monster_name_snapshot.($hunt->enemy_count>1?' '.$enemy->position:''),'initial_health'=>$enemy->initial_health,'final_health'=>$enemy->final_health,'status'=>$enemy->status];
+        $events=$hunt->combatEvents->map(function($event){return $event->only(['sequence','round','actor_identifier','target_identifier','event_type','did_hit','hit_probability','hit_roll','critical_probability','critical_roll','is_critical','damage','healing','target_health_before','target_health_after','playback_offset_ms','playback_duration_ms']);})->all();
+        $historicalReward=null;if($hunt->reward){$items=$hunt->reward->items->map(function($item){return['item_id'=>$item->item_id,'item_name'=>$item->item_name_snapshot,'quantity'=>$item->quantity];})->all();$historicalReward=['hunt_id'=>$hunt->id,'item_lines_count'=>count($items),'items'=>$items];}
+        return ['hunt_id'=>$hunt->id,'status'=>$hunt->status,'rounds_count'=>$hunt->rounds_count,'enemy_count'=>$hunt->enemy_count,'character_health_before'=>$hunt->character_health_before,'character_health_after'=>$hunt->character_health_after,'resolved_at'=>$hunt->resolved_at->toIso8601String(),'combat_events_duration_ms'=>$hunt->combat_events_duration_ms,'result_reveal_duration_ms'=>$hunt->result_reveal_duration_ms,'loot_reveal_duration_ms'=>$hunt->loot_reveal_duration_ms,'playback_duration_ms'=>$hunt->playback_duration_ms,'playback_speed_multiplier'=>$hunt->playback_speed_multiplier,'participants'=>$participants,'events'=>$events,'historical_reward'=>$historicalReward,'enemies'=>$hunt->enemies->map(function($enemy){return ['position'=>$enemy->position,'identifier'=>$enemy->instance_identifier,'monster_name'=>$enemy->monster_name_snapshot,'initial_health'=>$enemy->initial_health,'final_health'=>$enemy->final_health,'status'=>$enemy->status];})->all()];
+    }
+
+    private function result(HuntingSession $session, CarbonImmutable $now, $latestHunt, $processedHunt)
+    {
+        $next = $session->next_encounter_at ? CarbonImmutable::instance($session->next_encounter_at) : null;
+        $generatedReward = $this->generatedReward ? $this->generatedReward->toArray() : null;
+        $this->generatedReward = null;
+        if ($processedHunt === null) $generatedReward = null;
+        if ($generatedReward !== null && (int)$generatedReward['hunt_id'] !== (int)$processedHunt['hunt_id']) throw new \RuntimeException('Generated reward does not match processed Hunt.');
+        $capacity = $this->resultCapacity ? $this->resultCapacity->toArray() : null;
+        $this->resultCapacity = null;
+        return new HuntingSessionResult(['session_id'=>$session->id,'status'=>$session->status,'stop_reason'=>$session->stop_reason,'server_time'=>$now->toIso8601String(),'next_encounter_at'=>$next?$next->toIso8601String():null,'seconds_until_next_encounter'=>$next?max(0,$now->diffInSeconds($next,false)):null,'consecutive_defeats'=>$session->consecutive_defeats,'hunts_count'=>$session->hunts_count,'victories_count'=>$session->victories_count,'defeats_count'=>$session->defeats_count,'draws_count'=>$session->draws_count,'latest_hunt'=>$latestHunt,'processed_hunt'=>$processedHunt,'generated_reward'=>$generatedReward,'pending_rewards_summary'=>$this->rewards->summary($session->id),'inventory_capacity'=>$capacity]);
+    }
+}

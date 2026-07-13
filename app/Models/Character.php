@@ -22,6 +22,7 @@ class Character extends Model
         'base_accuracy' => 'integer',
         'base_evasion' => 'integer',
         'base_critical_rate' => 'decimal:2',
+        'base_inventory_slots' => 'integer',
     ];
 
     public function user()
@@ -45,4 +46,5 @@ class Character extends Model
     public function goldTransactions(){return $this->hasMany(GoldTransaction::class);}
     public function hunts(){return $this->hasMany(Hunt::class);}
     public function huntingSessions(){return $this->hasMany(HuntingSession::class);}
+    public function inventoryCapacityGrants(){return $this->hasMany(InventoryCapacityGrant::class);}
 }

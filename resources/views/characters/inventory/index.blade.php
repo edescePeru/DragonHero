@@ -3,6 +3,7 @@
 @php($breadcrumbs=[['label'=>'Inicio','url'=>route('dashboard')],['label'=>'Mi personaje','url'=>route('characters.show',$character)],['label'=>'Inventario','url'=>null]])
 @section('content')
 <div class="mb-4"><a href="{{ route('characters.show',$character) }}">Volver al personaje</a><h1 class="fs-3 mt-2">Inventario</h1><p class="text-secondary">Objetos distintos: {{ $entries->count() }}</p></div>
+@isset($inventoryCapacity)<div class="row g-3 mb-4"><div class="col-md-4"><div class="card"><div class="card-body">Capacidad <strong>{{ $inventoryCapacity['current_used_slots'] }} / {{ $inventoryCapacity['effective_capacity'] }}</strong></div></div></div><div class="col-md-4"><div class="card"><div class="card-body">Proyección pendiente <strong>{{ $inventoryCapacity['projected_used_slots'] }} slots</strong></div></div></div><div class="col-md-4"><div class="card"><div class="card-body">Reserva de cacería <strong>{{ $inventoryCapacity['effective_reserve'] }}</strong></div></div></div></div>@endisset
 <div class="card"><div class="card-header"><h2 class="h5 mb-0">Objetos apilables</h2></div>
 @if($entries->isEmpty())<div class="card-body p-5 text-center text-secondary">El inventario está vacío.</div>@else
 <div class="table-responsive"><table class="table mb-0"><thead><tr><th>Objeto</th><th>Tipo</th><th>Rareza</th><th>Total</th><th>Bloqueado</th><th>Disponible</th></tr></thead><tbody>

@@ -7,3 +7,9 @@ El heartbeat se sugiere cada 10 segundos y vence a los 30 segundos. La expiraci�
 Una victoria reinicia resultados no ganados y programa 3 segundos. El primer resultado no ganado programa 30 segundos, el segundo 60 y el tercero detiene la sesión. Un draw incrementa su contador propio, pero cuenta como resultado no ganado para esta protección. `current_health` no se persiste entre encuentros y las estadísticas se recalculan en cada Hunt.
 
 Esta solución es propia del MVP. Con más usuarios, cada navegador genera solicitudes PHP breves y no hay trabajo cuando deja de llamar. En el futuro puede migrarse a WebSockets, workers, colas o planificación centralizada sin cambiar las reglas persistidas de la sesión. No existe progreso offline, procesamiento retroactivo ni recompensas en esta fase.
+# Capacidad preventiva
+
+Antes de cada encuentro vencido se recalcula la proyección global del personaje. Si no conserva la reserva, la sesión se detiene con `pending_inventory_capacity` sin crear otro Hunt. Tras una victoria se persiste primero la recompensa y se recalcula desde la base dentro de la misma transacción. Una tercera derrota o empate conserva prioridad como `consecutive_defeats`. Los ticks tempranos de heartbeat no consultan capacidad.
+# Reproducción de combate
+
+Cada encuentro conectado persiste una timeline autoritativa. `processed_hunt` presenta el evento nuevo; `latest_hunt` permite reanudar la timeline histórica sin regenerar reward. Véase `HUNTING_PLAYBACK.md`.
