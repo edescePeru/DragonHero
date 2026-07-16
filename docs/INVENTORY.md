@@ -19,3 +19,5 @@ La FK de item usa RESTRICT: un item referenciado no puede eliminarse físicament
 Los objetos no apilables se representan ahora mediante `ItemInstance`; `character_items` queda reservado a clasificaciones coherentes apilables. Refinamiento, evolución, equipamiento y comercio siguen fuera de alcance. Véase `ITEM_INSTANCES.md`.
 
 Loot, crafteo, mercado y misiones reutilizarán `InventoryService`. Las instancias únicas y equipo usarán posteriormente `item_instances`. Un futuro `item_transactions` proporcionará auditoría económica; no forma parte de este incremento.
+
+El equipamiento básico separa las instancias `available`, visibles y contadas en mochila, de las `equipped`, visibles en el snapshot de equipo y fuera de la mochila. Desequipar exige espacio físico, pero no conservar la reserva adicional de cacería.

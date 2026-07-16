@@ -6,6 +6,7 @@ use App\Domain\Characters\Actions\CreateCharacterAction;
 use App\Domain\Characters\CharacterStatsCalculator;
 use App\Domain\Characters\Progression\CharacterProgressionService;
 use App\Domain\Media\MediaAssetType;
+use App\Domain\Equipment\CharacterEquipmentSummaryService;
 use App\Http\Requests\Characters\CreateCharacterRequest;
 use App\Models\Character;
 use Illuminate\Http\Request;
@@ -37,7 +38,8 @@ class CharacterController extends Controller
     public function show(
         Character $character,
         CharacterStatsCalculator $calculator,
-        CharacterProgressionService $progressionService
+        CharacterProgressionService $progressionService,
+        CharacterEquipmentSummaryService $equipmentService
     )
     {
         $this->authorize('view', $character);
@@ -48,7 +50,8 @@ class CharacterController extends Controller
 
         $stats = $calculator->calculate($character);
         $experienceProgress = $progressionService->experienceProgress($character);
+        $equipmentSummary = $equipmentService->snapshot($character);
 
-        return view('characters.show', compact('character', 'stats', 'experienceProgress'));
+        return view('characters.show', compact('character', 'stats', 'experienceProgress', 'equipmentSummary'));
     }
 }

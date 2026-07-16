@@ -48,4 +48,5 @@ class Character extends Model
     public function huntingSessions(){return $this->hasMany(HuntingSession::class);}
     public function inventoryCapacityGrants(){return $this->hasMany(InventoryCapacityGrant::class);}
     public function itemInstances(){return $this->hasMany(ItemInstance::class);}
+    public function equipment(){return $this->hasMany(CharacterEquipment::class);}
 }

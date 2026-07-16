@@ -177,3 +177,5 @@ Estos sistemas permanecen como visión futura y requerirán documentos de diseñ
 # Capacidad de inventario
 
 La fase actual deriva slots desde cantidades agregadas y `max_stack`, contempla mejoras permanentes y eventos temporales, y reserva margen para recompensas pendientes. No existe todavía transferencia ni reclamación.
+
+El MVP de equipamiento administra ocho slots, posesión, capacidad y trazabilidad de instancias. Las bonificaciones de estadísticas permanecen pendientes y no afectan todavía al combate.

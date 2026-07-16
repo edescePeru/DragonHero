@@ -33,3 +33,5 @@ El power provisional combina vida máxima, ataque, defensa, precisión, evasión
 La experiencia del personaje es acumulada. `CharacterProgressionService` interpreta el catálogo de `CharacterLevelRequirement` tanto para conceder experiencia como para preparar el progreso visual, sin recalcular ni modificar el nivel durante una lectura. `CharacterExperienceProgress` entrega a la vista el requisito actual, el siguiente umbral, la experiencia ganada y faltante dentro del tramo y el porcentaje redondeado a dos decimales.
 
 La ficha no consulta el catálogo ni calcula porcentajes. Cuando no existe un nivel siguiente configurado, presenta el nivel máximo disponible y una barra completa; la experiencia acumulada puede continuar por encima del último umbral.
+
+La ficha recibe también un snapshot controlado de los ocho slots de equipamiento. El equipo todavía no altera estadísticas efectivas; esa integración será un incremento independiente.

@@ -13,3 +13,5 @@ El orden global de locks es Character, `character_items`, `item_instances`, rewa
 La importación heredada usa Query Builder y UUID deterministas, sin modelos ni servicios. Su reversión solo es segura mientras propietario, Item, refinamiento, estado y único evento de importación permanezcan intactos. Tras comercio, evolución o refinamiento puede ser funcionalmente irreversible.
 
 Eventos futuros documentados, no implementados: `refined`, `evolved`, `equipped`, `unequipped`, `traded`, `sold`, `destroyed`, `bound` y `admin_adjusted`. Las recetas futuras configurarán reset o conservación de refinamiento, opciones, sockets y binding. Los objetos apilables requerirán un `InventoryMovementLedger` separado.
+
+`equipped` y `unequipped` ya están implementados por el módulo de equipamiento. `available` ocupa mochila y `equipped` no; ambos estados deben permanecer sincronizados con `character_equipment`. El orden de locks incorpora esta tabla después de las instancias y antes del catálogo.

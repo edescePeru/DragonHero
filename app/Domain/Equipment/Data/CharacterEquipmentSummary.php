@@ -1,0 +1,2 @@
+<?php
+namespace App\Domain\Equipment\Data;use InvalidArgumentException;final class CharacterEquipmentSummary{private $entries;public function __construct(array $entries){foreach($entries as $entry)if(!$entry instanceof CharacterEquipmentEntry)throw new InvalidArgumentException('Invalid equipment summary entry.');$this->entries=array_values($entries);}public function entries(){return array_values($this->entries);}public function toArray(){return array_map(function($entry){return$entry->toArray();},$this->entries);}}

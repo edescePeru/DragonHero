@@ -1,0 +1,2 @@
+<?php
+namespace App\Domain\Equipment\Data;final class CharacterEquipmentMutationResult{private $modified;private $operationUuid;public function __construct($modified,$operationUuid){$this->modified=(bool)$modified;$this->operationUuid=$operationUuid;}public function modified(){return$this->modified;}public function operationUuid(){return$this->operationUuid;}public function toArray(){return['modified'=>$this->modified,'operation_uuid'=>$this->operationUuid];}}

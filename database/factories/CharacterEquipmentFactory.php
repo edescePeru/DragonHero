@@ -1,0 +1,3 @@
+<?php
+namespace Database\Factories;use App\Domain\Equipment\CharacterEquipmentSlot;use App\Models\CharacterEquipment;use App\Models\ItemInstance;use Illuminate\Database\Eloquent\Factories\Factory;
+class CharacterEquipmentFactory extends Factory{protected $model=CharacterEquipment::class;public function definition(){$instance=ItemInstance::factory()->create();return['character_id'=>$instance->character_id,'slot'=>CharacterEquipmentSlot::WEAPON_MAIN,'item_instance_id'=>$instance->id,'equipped_at'=>now()];}public function configure(){return$this->afterCreating(function(CharacterEquipment $equipment){$equipment->itemInstance()->update(['status'=>'equipped']);});}}
