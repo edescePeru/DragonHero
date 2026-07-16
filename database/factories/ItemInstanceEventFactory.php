@@ -1,0 +1,3 @@
+<?php
+namespace Database\Factories;use App\Domain\Inventory\Instances\ItemInstanceEventType;use App\Domain\Inventory\Instances\ItemInstanceOriginType;use App\Models\ItemInstance;use App\Models\ItemInstanceEvent;use Illuminate\Database\Eloquent\Factories\Factory;
+class ItemInstanceEventFactory extends Factory{protected $model=ItemInstanceEvent::class;public function definition(){return['item_instance_id'=>ItemInstance::factory(),'operation_uuid'=>$this->faker->uuid,'event_type'=>ItemInstanceEventType::IMPORTED_FROM_LEGACY_INVENTORY,'source_type'=>ItemInstanceOriginType::LEGACY_INVENTORY,'source_id'=>$this->faker->unique()->numberBetween(1,PHP_INT_MAX),'refinement_after'=>0,'occurred_at'=>now(),'created_at'=>now()];}}

@@ -11,7 +11,7 @@ use App\Domain\Inventory\CharacterInventorySummaryService;
 class CharacterInventoryController extends Controller {
  public function index(Character $character,CharacterInventorySummaryService $summaryService,HuntRewardService $rewards){
   $this->authorize('view',$character);
-  $inventorySummary=$summaryService->snapshot($character);$itemIds=collect($inventorySummary['inventory_items'])->pluck('item_id');
+  $inventorySummary=$summaryService->snapshot($character);$itemIds=collect($inventorySummary['stackable_items'])->merge($inventorySummary['item_instances'])->pluck('item_id')->unique();
   $inventoryItems=$itemIds->isEmpty()?collect():Item::query()->whereKey($itemIds)->with(['mediaAssets'=>function($query){$query->where('asset_type',MediaAssetType::ICON);}])->get()->keyBy('id');
   $pendingRewardsSummary=$rewards->summaryPendingForCharacter($character);
   return view('characters.inventory.index',compact('character','inventorySummary','inventoryItems','pendingRewardsSummary'));

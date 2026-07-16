@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Domain\Characters\Actions\CreateCharacterAction;
 use App\Domain\Characters\CharacterStatsCalculator;
+use App\Domain\Characters\Progression\CharacterProgressionService;
 use App\Domain\Media\MediaAssetType;
 use App\Http\Requests\Characters\CreateCharacterRequest;
 use App\Models\Character;
@@ -33,7 +34,11 @@ class CharacterController extends Controller
         return redirect()->route('characters.show', $character);
     }
 
-    public function show(Character $character, CharacterStatsCalculator $calculator)
+    public function show(
+        Character $character,
+        CharacterStatsCalculator $calculator,
+        CharacterProgressionService $progressionService
+    )
     {
         $this->authorize('view', $character);
 
@@ -42,7 +47,8 @@ class CharacterController extends Controller
         }]);
 
         $stats = $calculator->calculate($character);
+        $experienceProgress = $progressionService->experienceProgress($character);
 
-        return view('characters.show', compact('character', 'stats'));
+        return view('characters.show', compact('character', 'stats', 'experienceProgress'));
     }
 }

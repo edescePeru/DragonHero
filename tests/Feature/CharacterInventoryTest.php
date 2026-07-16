@@ -5,11 +5,12 @@ use App\Models\Character;
 use App\Models\Item;
 use App\Models\User;
 use Database\Seeders\WorldCatalogSeeder;
+use Database\Seeders\CharacterLevelRequirementSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 class CharacterInventoryTest extends TestCase {
  use RefreshDatabase;
- protected function setUp():void{parent::setUp();$this->seed(WorldCatalogSeeder::class);}
+ protected function setUp():void{parent::setUp();$this->seed(WorldCatalogSeeder::class);$this->seed(CharacterLevelRequirementSeeder::class);}
  private function player(){ $user=User::factory()->create();$character=Character::factory()->for($user)->create();return [$user,$character]; }
  public function test_guest_cannot_view_inventory(){ list($user,$character)=$this->player();$this->get(route('characters.inventory.index',$character))->assertRedirect('/login'); }
  public function test_user_cannot_view_another_inventory(){ list($owner,$character)=$this->player();$other=User::factory()->create();Character::factory()->for($other)->create();$this->actingAs($other)->get(route('characters.inventory.index',$character))->assertForbidden(); }

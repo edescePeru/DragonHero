@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Character;
 use App\Models\User;
+use Database\Seeders\CharacterLevelRequirementSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -11,6 +12,12 @@ use Tests\TestCase;
 class CharacterStatsDisplayTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(CharacterLevelRequirementSeeder::class);
+    }
 
     public function test_character_sheet_displays_effective_stats_and_power()
     {
@@ -64,5 +71,33 @@ class CharacterStatsDisplayTest extends TestCase
             ->assertOk()
             ->assertViewHas('stats')
             ->assertSee('Poder actual: 147');
+    }
+
+    public function test_character_sheet_displays_intermediate_experience_progress()
+    {
+        $user = User::factory()->create();
+        $character = Character::factory()->for($user)->create(['level' => 2, 'experience' => 140]);
+
+        $this->actingAs($user)->get(route('characters.show', $character))
+            ->assertOk()
+            ->assertViewHas('experienceProgress')
+            ->assertSee('EXP acumulada')
+            ->assertSee('Progreso nivel 2 → 3')
+            ->assertSee('40 / 150 EXP')
+            ->assertSee('Faltan')
+            ->assertSee('110 EXP')
+            ->assertSee('26.67%');
+    }
+
+    public function test_character_sheet_displays_maximum_level_progress()
+    {
+        $user = User::factory()->create();
+        $character = Character::factory()->for($user)->create(['level' => 5, 'experience' => 920]);
+
+        $this->actingAs($user)->get(route('characters.show', $character))
+            ->assertOk()
+            ->assertSee('Nivel máximo actual alcanzado')
+            ->assertSee('100%')
+            ->assertDontSee('Faltan');
     }
 }

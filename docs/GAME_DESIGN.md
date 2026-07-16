@@ -82,6 +82,8 @@ Cada concesión debe estar vinculada a una resolución válida y registrarse den
 
 ## Inventario
 
+Los materiales apilables usan cantidades agregadas. Armas, armaduras y otros objetos únicos usan instancias individuales con origen e historial mínimo, preparadas para refinamiento y evolución configurables futuras.
+
 El inventario representa los objetos y recursos poseídos por el jugador. Debe permitir consultar, clasificar y utilizar objetos según reglas controladas por el servidor.
 
 Capacidad, apilamiento, categorías, límites y reglas de destrucción o transferencia: **PENDIENTES DE DISEÑO Y BALANCE**.

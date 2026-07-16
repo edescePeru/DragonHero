@@ -7,6 +7,7 @@ use App\Domain\Characters\CharacterStatus;
 use App\Models\Character;
 use App\Models\User;
 use App\Policies\CharacterPolicy;
+use Database\Seeders\CharacterLevelRequirementSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -14,6 +15,12 @@ use Tests\TestCase;
 class CharacterTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(CharacterLevelRequirementSeeder::class);
+    }
 
     public function test_authenticated_user_without_character_sees_creation_screen()
     {

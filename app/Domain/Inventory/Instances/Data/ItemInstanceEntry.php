@@ -1,0 +1,3 @@
+<?php
+namespace App\Domain\Inventory\Instances\Data;
+final class ItemInstanceEntry{private $v;public function __construct(string $uuid,int $itemId,string $code,string $name,int $refinement,string $status,string $acquiredAt){$this->v=func_get_args();}public function uuid(){return$this->v[0];}public function publicReference(){return strtoupper(substr(str_replace('-','',$this->v[0]),-8));}public function toArray(){return['uuid'=>$this->v[0],'public_reference'=>$this->publicReference(),'item_id'=>$this->v[1],'item_code'=>$this->v[2],'item_name'=>$this->v[3],'refinement_level'=>$this->v[4],'status'=>$this->v[5],'acquired_at'=>$this->v[6]];}}

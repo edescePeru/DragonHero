@@ -6,4 +6,6 @@ El saldo no puede ser negativo y los créditos se comprueban contra `PHP_INT_MAX
 
 MySQL 5.7 no aplica realmente restricciones `CHECK`. Por ello `amount > 0` se protege con `BIGINT UNSIGNED`, validación autoritativa repetida dentro de WalletService, ausencia de escrituras web directas y pruebas. No se crean triggers. Toda escritura futura debe pasar por WalletService.
 
+Los claims de cacería usan `creditLocked()` dentro de la transacción autoritativa ya abierta. Todo el oro de las recompensas pendientes se agrega en un único crédito con razón `hunting_reward`; no se crea un movimiento por objeto ni por enemigo.
+
 El ledger no se edita ni elimina. Su FK usa RESTRICT: un personaje con movimientos no puede borrarse físicamente y deberá archivarse o adoptar soft deletes en el futuro. Las referencias permitirán vincular movimientos con cacerías, misiones, tiendas, crafteo y comercio sin implementar todavía esos sistemas.

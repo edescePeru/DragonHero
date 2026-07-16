@@ -13,6 +13,7 @@ use App\Models\Monster;
 use App\Models\User;
 use App\Models\Zone;
 use Database\Seeders\WorldCatalogSeeder;
+use Database\Seeders\CharacterLevelRequirementSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -25,6 +26,7 @@ class MediaAssetComponentsTest extends TestCase
     {
         parent::setUp();
         $this->seed(WorldCatalogSeeder::class);
+        $this->seed(CharacterLevelRequirementSeeder::class);
     }
 
     private function media()
@@ -108,7 +110,7 @@ class MediaAssetComponentsTest extends TestCase
         });
         $this->assertSame(1, $mediaQueries);
 
-        $inventorySummary=['inventory_items'=>[['item_id'=>999999,'item_code'=>'missing_item','item_name'=>'Objeto ausente','quantity'=>3,'locked_quantity'=>0,'available_quantity'=>3,'max_stack'=>99,'used_slots'=>1]],'inventory_status'=>['effective_capacity'=>30,'current_used_slots'=>1,'current_free_slots'=>29],'pending_projection'=>['projected_used_slots'=>1,'projected_free_slots'=>29,'claim_fits'=>true,'missing_slots_for_claim'=>0,'effective_reserve'=>5,'hunting_can_continue'=>true]];
+        $inventorySummary=['stackable_items'=>[['item_id'=>999999,'item_code'=>'missing_item','item_name'=>'Objeto ausente','quantity'=>3,'locked_quantity'=>0,'available_quantity'=>3,'max_stack'=>99,'used_slots'=>1]],'item_instances'=>[],'inventory_status'=>['effective_capacity'=>30,'current_used_slots'=>1,'current_free_slots'=>29],'pending_projection'=>['projected_used_slots'=>1,'projected_free_slots'=>29,'claim_fits'=>true,'missing_slots_for_claim'=>0,'effective_reserve'=>5,'hunting_can_continue'=>true]];
         $html = view('characters.inventory.index', ['character' => $character, 'inventorySummary' => $inventorySummary, 'inventoryItems' => collect()])->render();
         $this->assertStringContainsString('Objeto ausente', $html);
         $this->assertStringContainsString('data-media-state="not-loaded"', $html);

@@ -8,11 +8,12 @@ use App\Models\Zone;
 use App\Models\ZoneConnection;
 use App\Domain\WorldCatalog\ZoneCatalogService;
 use Database\Seeders\WorldCatalogSeeder;
+use Database\Seeders\CharacterLevelRequirementSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 class WorldCatalogNavigationTest extends TestCase {
  use RefreshDatabase;
- protected function setUp():void{parent::setUp();$this->seed(WorldCatalogSeeder::class);}
+ protected function setUp():void{parent::setUp();$this->seed(WorldCatalogSeeder::class);$this->seed(CharacterLevelRequirementSeeder::class);}
  private function player(){ $user=User::factory()->create();Character::factory()->for($user)->create();return $user; }
  public function test_guest_cannot_browse_catalog(){ $this->get('/worlds')->assertRedirect('/login'); }
  public function test_user_without_character_keeps_creation_flow(){ $this->actingAs(User::factory()->create())->get('/worlds')->assertRedirect(route('characters.create')); }
