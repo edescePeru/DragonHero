@@ -28,6 +28,8 @@ La reducción provisional es `(defense / (defense + 100)) * 100`, limitada a 75 
 
 El power provisional combina vida máxima, ataque, defensa, precisión, evasión, crítico, multiplicador crítico, velocidad de ataque y reducción de daño. No representa daño final ni una probabilidad contextual de acertar o esquivar.
 
+El equipamiento confirmado se suma en esta misma autoridad. La ficha recibe base, aporte del equipo y valor efectivo ya preparados; Blade no consulta Items ni reproduce fórmulas. Véase `docs/CHARACTER_STATS.md`.
+
 ## Progreso de experiencia
 
 La experiencia del personaje es acumulada. `CharacterProgressionService` interpreta el catálogo de `CharacterLevelRequirement` tanto para conceder experiencia como para preparar el progreso visual, sin recalcular ni modificar el nivel durante una lectura. `CharacterExperienceProgress` entrega a la vista el requisito actual, el siguiente umbral, la experiencia ganada y faltante dentro del tramo y el porcentaje redondeado a dos decimales.

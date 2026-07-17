@@ -53,6 +53,10 @@ php artisan test
 
 `phpunit.xml` fuerza el uso de `A4gamesDH_testing`. No ejecutes `migrate:fresh`, `db:wipe` ni pruebas automatizadas contra `A4gamesDH`.
 
+## Admin Content interno
+
+Configure localmente `DRAGONHERO_ADMIN_EMAILS` con correos separados por comas y acceda a `/admin/content/items`. Un valor vacío no autoriza a nadie. No incluya correos privados en archivos versionados. Consulte `docs/ADMIN_CONTENT.md`.
+
 ## Plantilla administrativa
 
 La interfaz inicial deriva de InApp Inventory Admin Dashboard, creada por CodesCandy y distribuida por ThemeWagon bajo licencia MIT. Consulta `LICENSE` para más información.

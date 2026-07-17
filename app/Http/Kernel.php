@@ -61,6 +61,7 @@ class Kernel extends HttpKernel
         'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
         'character.required' => \App\Http\Middleware\EnsureUserHasCharacter::class,
         'game.navigation' => \App\Http\Middleware\ShareGameNavigationContext::class,
+        'content.admin' => \App\Http\Middleware\EnsureContentAdministrator::class,
         'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
         'signed' => \Illuminate\Routing\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,

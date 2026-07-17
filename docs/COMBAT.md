@@ -1,5 +1,7 @@
 # Motor de combate
 
+El combatiente del personaje recibe estadísticas efectivas desde `CharacterStatsCalculator`. `attack_speed_bonus` aumenta la prioridad de ataque según el orden por velocidad de cada ronda; no representa todavía ataques por segundo.
+
 El núcleo representa participantes inmutables agrupados explícitamente en `players` y `enemies`. Cada `CombatParticipantState` conserva estadísticas, vida, bando y posición. Los identifiers deben ser únicos; el futuro constructor de encuentros asignará identificadores de aparición como `grey_wolf:1` y `grey_wolf:2`.
 
 `CombatState` mantiene participantes, ronda, `actionOrder` y `currentActionIndex`; el siguiente actor se deriva de esos datos. `CombatTurnOrder` es la única fuente de orden: velocidad descendente, players primero en empate, posición y finalmente identifier. Los muertos pendientes se omiten sin RNG y la ronda siguiente reconstruye el orden con supervivientes.

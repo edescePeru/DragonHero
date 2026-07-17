@@ -16,6 +16,10 @@ Las rutas POST reciben únicamente UUID completo y slot controlado. El servicio 
 
 Un Item inactivo no puede entrar al equipo. Si fue desactivado mientras estaba equipado, puede permanecer y siempre puede salir. Los eventos son append-only por contrato de aplicación, no una protección criptográfica frente a escritura SQL directa.
 
+## Estadísticas efectivas
+
+Los bonus viven en `Item`; `ItemInstance` aporta esos valores solo cuando está equipado. El refinamiento no altera estadísticas todavía. `CharacterStatsCalculator` es la única autoridad y cada nuevo Hunt de una HuntingSession toma el equipamiento confirmado en ese instante. Véase `docs/CHARACTER_STATS.md`.
+
 ## Alcance MVP
 
 Este incremento administra propiedad, slots, estado y capacidad. No aplica estadísticas ni modifica combate. Refinamiento, evolución, requisitos, offhand, armas de dos manos, sets, durabilidad, comercio y drag-and-drop permanecen fuera de alcance.

@@ -18,6 +18,10 @@ La FK desde `HuntEnemy` hacia Monster usa RESTRICT: los monstruos históricos se
 
 La migración convierte Hunts históricos con Query Builder, verifica el backfill y elimina las columnas singulares. El rollback solo es posible sin pérdida mientras todos los Hunts tengan exactamente un enemigo; aborta antes de alterar el esquema si existen encuentros múltiples.
 
+## Snapshot de estadísticas
+
+Cada Hunt conserva un snapshot JSON versionado con estadísticas base, bonus, valores efectivos y fuentes de equipamiento. Los Hunts históricos no se recalculan. Una HuntingSession toma un snapshot nuevo por encuentro y no congela el equipo de toda la sesión.
+
 ## Resolución
 
 `HuntService` usa `CombatSimulator::simulateEncounter()`. Victoria significa todos los enemigos derrotados; derrota significa personaje derrotado; draw significa límite de rondas. En una derrota pueden coexistir enemigos vivos y derrotados.

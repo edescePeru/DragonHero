@@ -48,10 +48,11 @@ class CharacterController extends Controller
             $query->where('asset_type', MediaAssetType::PORTRAIT);
         }]);
 
-        $stats = $calculator->calculate($character);
+        $statsBreakdown = $calculator->breakdown($character);
+        $stats = $statsBreakdown->effective();
         $experienceProgress = $progressionService->experienceProgress($character);
         $equipmentSummary = $equipmentService->snapshot($character);
 
-        return view('characters.show', compact('character', 'stats', 'experienceProgress', 'equipmentSummary'));
+        return view('characters.show', compact('character', 'stats', 'statsBreakdown', 'experienceProgress', 'equipmentSummary'));
     }
 }

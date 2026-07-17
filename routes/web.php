@@ -17,6 +17,11 @@ use App\Http\Controllers\CharacterHuntingSessionController;
 use App\Http\Controllers\CharacterHuntRewardClaimController;
 use App\Http\Controllers\CharacterEquipmentController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\Content\ItemController as AdminItemController;
+use App\Http\Controllers\Admin\Content\MonsterController as AdminMonsterController;
+use App\Http\Controllers\Admin\Content\ZoneController as AdminZoneController;
+use App\Http\Controllers\Admin\Content\ZoneMonsterController as AdminZoneMonsterController;
+use App\Http\Controllers\Admin\Content\LootController as AdminLootController;
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', ShowLoginController::class)->name('login');
@@ -57,4 +62,17 @@ Route::middleware(['auth', 'game.navigation', 'character.required'])->group(func
     Route::get('/worlds/{world}', [WorldCatalogController::class, 'show'])->name('worlds.show');
     Route::get('/regions/{region}', [RegionCatalogController::class, 'show'])->name('regions.show');
     Route::get('/zones/{zone}', [ZoneCatalogController::class, 'show'])->name('zones.show');
+});
+
+Route::prefix('admin/content')->name('admin.content.')->middleware(['auth','game.navigation','content.admin'])->group(function(){
+    Route::resource('items',AdminItemController::class)->except('show');
+    Route::resource('monsters',AdminMonsterController::class);
+    Route::resource('zones',AdminZoneController::class);
+    Route::get('loot',[AdminLootController::class,'index'])->name('loot.index');
+    Route::post('zones/{zone}/monsters',[AdminZoneMonsterController::class,'store'])->name('zones.monsters.store');
+    Route::put('zones/{zone}/monsters/{monster}',[AdminZoneMonsterController::class,'update'])->name('zones.monsters.update');
+    Route::delete('zones/{zone}/monsters/{monster}',[AdminZoneMonsterController::class,'destroy'])->name('zones.monsters.destroy');
+    Route::post('monsters/{monster}/loot',[AdminLootController::class,'store'])->name('monsters.loot.store');
+    Route::put('monsters/{monster}/loot/{lootEntry}',[AdminLootController::class,'update'])->name('monsters.loot.update');
+    Route::delete('monsters/{monster}/loot/{lootEntry}',[AdminLootController::class,'destroy'])->name('monsters.loot.destroy');
 });

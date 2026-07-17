@@ -1,0 +1,1 @@
+<nav class="nav nav-pills mb-4"><a class="nav-link" href="{{ route('admin.content.items.index') }}">Items</a><a class="nav-link" href="{{ route('admin.content.monsters.index') }}">Monsters</a><a class="nav-link" href="{{ route('admin.content.zones.index') }}">Zones</a><a class="nav-link" href="{{ route('admin.content.loot.index') }}">Loot</a></nav>
