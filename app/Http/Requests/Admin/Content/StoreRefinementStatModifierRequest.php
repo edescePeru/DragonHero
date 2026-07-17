@@ -1,0 +1,3 @@
+<?php
+namespace App\Http\Requests\Admin\Content;use App\Domain\WorldCatalog\CatalogStatus;use Illuminate\Foundation\Http\FormRequest;use Illuminate\Validation\Rule;
+class StoreRefinementStatModifierRequest extends FormRequest{public function authorize(){return true;}public function rules(){$model=$this->route('modifier');$unique=Rule::unique('refinement_stat_modifiers','refinement_level');if($model)$unique->ignore($model->id);return['refinement_level'=>['required','integer','min:1','max:15',$unique],'stat_increase_basis_points'=>['required','integer','min:0','max:100000'],'status'=>['required',Rule::in(CatalogStatus::values())]];}}

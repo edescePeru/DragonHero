@@ -1,0 +1,3 @@
+<?php
+namespace Database\Seeders;use App\Models\RefinementStatModifier;use Illuminate\Database\Seeder;use Illuminate\Support\Facades\DB;use RuntimeException;
+class RefinementStatModifierTestingSeeder extends Seeder{public function run(){if(!app()->environment('testing')||substr((string)DB::connection()->getDatabaseName(),-8)!=='_testing')throw new RuntimeException('RefinementStatModifierTestingSeeder requires an isolated _testing database.');foreach(range(1,15) as $level)RefinementStatModifier::updateOrCreate(['refinement_level'=>$level],['stat_increase_basis_points'=>$level*1000,'status'=>'active']);}}

@@ -25,3 +25,9 @@ Los bonus viven en `Item`; `ItemInstance` aporta esos valores solo cuando está 
 Este incremento administra propiedad, slots, estado y capacidad. No aplica estadísticas ni modifica combate. Refinamiento, evolución, requisitos, offhand, armas de dos manos, sets, durabilidad, comercio y drag-and-drop permanecen fuera de alcance.
 
 `CharacterEquipmentTestingSeeder` es opcional, idempotente y está restringido a entorno `testing` y bases con sufijo `_testing`; no pertenece al catálogo oficial ni se ejecuta desde `DatabaseSeeder`.
+
+## Desglose estadístico
+
+Cada fuente expone slot, UUID, Item, nombre, nivel, bonus base, bonus de refinamiento, total y disponibilidad de configuración. El proveedor carga equipo, instancias, Items y modificadores por lotes.
+
+`CharacterEquipmentStats::base()` contiene catálogo, `refinement()` el incremento y `total()` la suma. `bonuses()` permanece como alias compatible de `total()`.

@@ -9,3 +9,8 @@ Las escrituras pasan por Form Requests y `ContentAdminService`, que reutiliza lo
 Los endpoints DELETE de Items, Monsters y Zones nunca borran filas: cambian el estado a `inactive`. Esto preserva Hunts, rewards, inventarios, equipamiento y eventos históricos. Retirar un Monster de una Zone sí elimina exclusivamente la configuración mutable de la tabla pivote.
 
 Zones mantienen la jerarquía `World → Region → Zone`; se persiste `region_id` y no existe `world_id` redundante. Loot almacena puntos base. La conversión a porcentaje es solo visual: `10000 = 100%` y `7000 = 70%`.
+# Reglas de refinamiento
+
+`/admin/content/refinement` administra transiciones y materiales. En v1 solo acepta 10000 puntos base y `keep_level`; las reglas se desactivan en vez de eliminarse para preservar la historia.
+
+La misma pantalla administra, en una sección separada, modificadores estadísticos `+1..+15`. Permite crear, editar, activar y desactivar; no permite borrado físico. Activar revalida la fila completa y desactivar solo cambia su estado. La UI muestra puntos base, porcentaje equivalente y advertencias para niveles ausentes o inactivos. Los valores sembrados son provisionales.

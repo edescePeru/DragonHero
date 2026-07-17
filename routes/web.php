@@ -16,12 +16,15 @@ use App\Http\Controllers\CharacterHuntController;
 use App\Http\Controllers\CharacterHuntingSessionController;
 use App\Http\Controllers\CharacterHuntRewardClaimController;
 use App\Http\Controllers\CharacterEquipmentController;
+use App\Http\Controllers\CharacterItemRefinementController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Content\ItemController as AdminItemController;
 use App\Http\Controllers\Admin\Content\MonsterController as AdminMonsterController;
 use App\Http\Controllers\Admin\Content\ZoneController as AdminZoneController;
 use App\Http\Controllers\Admin\Content\ZoneMonsterController as AdminZoneMonsterController;
 use App\Http\Controllers\Admin\Content\LootController as AdminLootController;
+use App\Http\Controllers\Admin\Content\RefinementController as AdminRefinementController;
+use App\Http\Controllers\Admin\Content\RefinementStatModifierController as AdminRefinementStatModifierController;
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', ShowLoginController::class)->name('login');
@@ -46,6 +49,7 @@ Route::middleware(['auth', 'game.navigation'])->group(function () {
     Route::post('/characters/{character}/hunt-rewards/claim', CharacterHuntRewardClaimController::class)->name('characters.hunt-rewards.claim');
     Route::post('/characters/{character}/equipment/equip', [CharacterEquipmentController::class, 'equip'])->name('characters.equipment.equip');
     Route::post('/characters/{character}/equipment/unequip', [CharacterEquipmentController::class, 'unequip'])->name('characters.equipment.unequip');
+    Route::post('/characters/{character}/item-instances/{itemInstance}/refine', CharacterItemRefinementController::class)->name('characters.item-instances.refine');
 
     Route::get('/', [DashboardController::class, 'index'])
         ->middleware('character.required')
@@ -74,5 +78,17 @@ Route::prefix('admin/content')->name('admin.content.')->middleware(['auth','game
     Route::delete('zones/{zone}/monsters/{monster}',[AdminZoneMonsterController::class,'destroy'])->name('zones.monsters.destroy');
     Route::post('monsters/{monster}/loot',[AdminLootController::class,'store'])->name('monsters.loot.store');
     Route::put('monsters/{monster}/loot/{lootEntry}',[AdminLootController::class,'update'])->name('monsters.loot.update');
-    Route::delete('monsters/{monster}/loot/{lootEntry}',[AdminLootController::class,'destroy'])->name('monsters.loot.destroy');
+    Route::patch('monsters/{monster}/loot/{lootEntry}/activate',[AdminLootController::class,'activate'])->name('monsters.loot.activate');
+    Route::patch('monsters/{monster}/loot/{lootEntry}/deactivate',[AdminLootController::class,'deactivate'])->name('monsters.loot.deactivate');
+    Route::get('refinement',[AdminRefinementController::class,'index'])->name('refinement.index');
+    Route::post('refinement',[AdminRefinementController::class,'store'])->name('refinement.store');
+    Route::put('refinement/{refinementLevel}',[AdminRefinementController::class,'update'])->name('refinement.update');
+    Route::delete('refinement/{refinementLevel}',[AdminRefinementController::class,'destroy'])->name('refinement.destroy');
+    Route::post('refinement/{refinementLevel}/materials',[AdminRefinementController::class,'storeMaterial'])->name('refinement.materials.store');
+    Route::put('refinement/{refinementLevel}/materials/{material}',[AdminRefinementController::class,'updateMaterial'])->name('refinement.materials.update');
+    Route::delete('refinement/{refinementLevel}/materials/{material}',[AdminRefinementController::class,'destroyMaterial'])->name('refinement.materials.destroy');
+    Route::post('refinement/stats',[AdminRefinementStatModifierController::class,'store'])->name('refinement.stats.store');
+    Route::put('refinement/stats/{modifier}',[AdminRefinementStatModifierController::class,'update'])->name('refinement.stats.update');
+    Route::patch('refinement/stats/{modifier}/activate',[AdminRefinementStatModifierController::class,'activate'])->name('refinement.stats.activate');
+    Route::patch('refinement/stats/{modifier}/deactivate',[AdminRefinementStatModifierController::class,'deactivate'])->name('refinement.stats.deactivate');
 });

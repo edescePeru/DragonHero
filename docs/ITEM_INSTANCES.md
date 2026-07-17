@@ -15,3 +15,6 @@ La importación heredada usa Query Builder y UUID deterministas, sin modelos ni 
 Eventos futuros documentados, no implementados: `refined`, `evolved`, `equipped`, `unequipped`, `traded`, `sold`, `destroyed`, `bound` y `admin_adjusted`. Las recetas futuras configurarán reset o conservación de refinamiento, opciones, sockets y binding. Los objetos apilables requerirán un `InventoryMovementLedger` separado.
 
 `equipped` y `unequipped` ya están implementados por el módulo de equipamiento. `available` ocupa mochila y `equipped` no; ambos estados deben permanecer sincronizados con `character_equipment`. El orden de locks incorpora esta tabla después de las instancias y antes del catálogo.
+# Refinamiento
+
+El nivel `refinement_level` se modifica exclusivamente mediante `ItemRefinementService`. La operación conserva UUID, origen, propietario, estado y equipamiento, y escribe un evento append-only `refinement_succeeded`. En v1 el refinamiento no aporta estadísticas.

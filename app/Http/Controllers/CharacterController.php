@@ -51,7 +51,7 @@ class CharacterController extends Controller
         $statsBreakdown = $calculator->breakdown($character);
         $stats = $statsBreakdown->effective();
         $experienceProgress = $progressionService->experienceProgress($character);
-        $equipmentSummary = $equipmentService->snapshot($character);
+        $equipmentSummary = $equipmentService->snapshot($character, $statsBreakdown->equipmentSources());
 
         return view('characters.show', compact('character', 'stats', 'statsBreakdown', 'experienceProgress', 'equipmentSummary'));
     }

@@ -9,3 +9,6 @@ MySQL 5.7 no aplica realmente restricciones `CHECK`. Por ello `amount > 0` se pr
 Los claims de cacería usan `creditLocked()` dentro de la transacción autoritativa ya abierta. Todo el oro de las recompensas pendientes se agrega en un único crédito con razón `hunting_reward`; no se crea un movimiento por objeto ni por enemigo.
 
 El ledger no se edita ni elimina. Su FK usa RESTRICT: un personaje con movimientos no puede borrarse físicamente y deberá archivarse o adoptar soft deletes en el futuro. Las referencias permitirán vincular movimientos con cacerías, misiones, tiendas, crafteo y comercio sin implementar todavía esos sistemas.
+# Refinamiento
+
+Cada refinamiento con coste registra un único débito agregado con `reason_code=item_refinement`. Un coste cero no genera ledger. El movimiento comparte la transacción y UUID de operación con materiales, instancia y evento.

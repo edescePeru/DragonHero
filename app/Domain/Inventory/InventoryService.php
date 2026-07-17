@@ -50,6 +50,26 @@ final class InventoryService
         });
     }
 
+    /** Internal authoritative batch withdrawal. Requires prelocked rows and never opens a transaction. */
+    public function withdrawMultipleLocked(Character $character, Collection $items, array $quantities, Collection $existing): Collection
+    {
+        if (DB::transactionLevel() < 1) throw new \RuntimeException('Active transaction required.');
+        $rows = $existing->keyBy('item_id');
+        foreach ($quantities as $itemId => $quantity) {
+            if (! is_int($itemId) || $itemId <= 0 || ! is_int($quantity) || $quantity <= 0) throw new InvalidArgumentException('Invalid normalized inventory withdrawal.');
+            $item = $items->get($itemId); $row = $rows->get($itemId);
+            $this->assertUsableItem($item);
+            if (! $row || (int) $row->character_id !== (int) $character->id || (int) $row->quantity - (int) $row->locked_quantity < $quantity) throw new InsufficientItemQuantityException(InsufficientItemQuantityException::INSUFFICIENT_AVAILABLE_QUANTITY);
+        }
+        $result = collect();
+        foreach ($quantities as $itemId => $quantity) {
+            $row = $rows->get($itemId); $row->quantity = (int) $row->quantity - $quantity; $this->assertInvariants($row);
+            if ((int) $row->quantity === 0) $row->delete(); else $row->save();
+            $result->push($row->exists ? $this->toEntry($row, $items->get($itemId)) : null);
+        }
+        return $result;
+    }
+
     public function removeItem(Character $character, Item $item, int $quantity): ?InventoryEntry
     {
         $this->assertPositive($quantity);

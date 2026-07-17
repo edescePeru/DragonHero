@@ -21,3 +21,6 @@ Los objetos no apilables se representan ahora mediante `ItemInstance`; `characte
 Loot, crafteo, mercado y misiones reutilizarán `InventoryService`. Las instancias únicas y equipo usarán posteriormente `item_instances`. Un futuro `item_transactions` proporcionará auditoría económica; no forma parte de este incremento.
 
 El equipamiento básico separa las instancias `available`, visibles y contadas en mochila, de las `equipped`, visibles en el snapshot de equipo y fuera de la mochila. Desequipar exige espacio físico, pero no conservar la reserva adicional de cacería.
+# Consumo por refinamiento
+
+Los materiales de refinamiento son Items apilables coherentes almacenados en `character_items`. Se validan todos antes de consumir alguno, se bloquean por `item_id` ascendente y la fila se elimina solamente cuando `quantity` queda en cero.
