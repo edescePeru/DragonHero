@@ -1,0 +1,3 @@
+<?php
+namespace Database\Factories;use App\Models\World;use App\Models\WorldMap;use Illuminate\Database\Eloquent\Factories\Factory;
+class WorldMapFactory extends Factory{protected $model=WorldMap::class;public function definition(){return['world_id'=>function(){return World::firstOrCreate(['code'=>'factory_world'],['name'=>'Factory World','description'=>null,'status'=>'active','sort_order'=>0])->id;},'region_id'=>null,'code'=>'map_'.$this->faker->unique()->slug,'name'=>$this->faker->words(3,true),'description'=>$this->faker->sentence,'image_disk'=>'public','image_path'=>'test/world-map.png','original_width'=>640,'original_height'=>360,'mime_type'=>'image/png','file_size'=>100,'version'=>1,'status'=>'inactive','is_default'=>false,'sort_order'=>0];}}

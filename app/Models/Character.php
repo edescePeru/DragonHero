@@ -14,6 +14,7 @@ class Character extends Model
 
     protected $casts = [
         'level' => 'integer',
+        'character_class_id' => 'integer',
         'experience' => 'integer',
         'current_health' => 'integer',
         'base_max_health' => 'integer',
@@ -29,6 +30,8 @@ class Character extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function characterClass(){return $this->belongsTo(CharacterClass::class);}
 
     public function characterItems()
     {

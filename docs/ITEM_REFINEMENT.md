@@ -16,6 +16,12 @@ La repetición exacta de un token reconstruye `RefinementResult` desde el evento
 
 El seeder visual configura provisionalmente `+1..+15` con incrementos lineales de 10 % para validar arquitectura. Son valores de desarrollo pendientes de balance.
 
+## Fallo seguro y probabilidad
+
+Cada regla admite entre `1` y `10000` puntos base. El servidor genera exactamente una tirada entera entre `1` y `10000`; hay éxito cuando `roll <= success_chance_basis_points`. Un fallo `keep_level` es un intento válido: consume el oro y todos los materiales, conserva nivel, UUID, Item, estado y slot, y registra `refinement_failed`.
+
+La idempotencia depende de `operation_uuid`. Repetir el mismo token reconstruye éxito o fallo sin consumir ni tirar nuevamente. Dos tokens distintos del mismo nivel son intentos independientes: después de un fallo el segundo sigue siendo válido; después de un éxito queda obsoleto porque el nivel cambió. Los eventos históricos de éxito permanecen compatibles y no se reescriben.
+
 ## Límites de v1
 
 El nivel todavía no modifica estadísticas, combate ni vida. Refinar una instancia equipada conserva estado, slot, UUID, origen y relación de equipamiento. No se generan eventos de equipar o desequipar. El catálogo administrativo no elimina reglas: las desactiva. `ItemRefinementTestingSeeder` es explícito, idempotente, exclusivo de una base `_testing` y no entrega recursos a personajes.

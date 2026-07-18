@@ -16,7 +16,8 @@ final class RefinementRuleValidator
     public function validate(RefinementLevel $rule)
     {
         if ((int) $rule->from_level < ItemInstanceLimits::MIN_REFINEMENT_LEVEL || (int) $rule->to_level !== (int) $rule->from_level + 1 || (int) $rule->to_level > ItemInstanceLimits::MAX_REFINEMENT_LEVEL) throw new InvalidArgumentException('Refinement levels must be consecutive and within limits.');
-        if ((int) $rule->success_chance_basis_points !== 10000) throw new InvalidArgumentException('Refinement v1 requires a 100% success chance.');
+        $chance = (int) $rule->success_chance_basis_points;
+        if ($chance < 1 || $chance > 10000) throw new InvalidArgumentException('Refinement success chance must be between 1 and 10000 basis points.');
         if ($rule->failure_behavior !== RefinementFailureBehavior::KEEP_LEVEL) throw new InvalidArgumentException('Invalid refinement failure behavior.');
         if (! in_array($rule->status, CatalogStatus::values(), true)) throw new InvalidArgumentException('Invalid refinement rule status.');
         $this->safeNonNegative($rule->gold_cost);

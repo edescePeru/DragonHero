@@ -1,0 +1,3 @@
+<?php
+namespace Database\Factories;use App\Models\WorldMap;use App\Models\WorldMapArea;use Illuminate\Database\Eloquent\Factories\Factory;
+class WorldMapAreaFactory extends Factory{protected $model=WorldMapArea::class;public function definition(){return['world_map_id'=>WorldMap::factory(),'code'=>'area_'.$this->faker->unique()->slug,'name'=>$this->faker->words(2,true),'description'=>'Información del destino.','polygon_points'=>['coordinate_system'=>'normalized','points'=>[['x'=>0.1,'y'=>0.1],['x'=>0.4,'y'=>0.1],['x'=>0.2,'y'=>0.4]]],'action_type'=>'info','display_mode'=>'panel','z_index'=>0,'status'=>'draft','sort_order'=>0,'version'=>1];}}

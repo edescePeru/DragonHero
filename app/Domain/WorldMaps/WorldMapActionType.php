@@ -1,0 +1,2 @@
+<?php
+namespace App\Domain\WorldMaps;final class WorldMapActionType{const ZONE='zone';const MAP='map';const WORLD='world';const REGION='region';const INTERNAL_ROUTE='internal_route';const INFO='info';const SEASONAL_EVENT='seasonal_event';const SPECIAL_SHOP='special_shop';public static function operational(){return[self::ZONE,self::MAP,self::WORLD,self::REGION,self::INTERNAL_ROUTE,self::INFO];}public static function reserved(){return[self::SEASONAL_EVENT,self::SPECIAL_SHOP];}public static function all(){return array_merge(self::operational(),self::reserved());}}

@@ -5,6 +5,7 @@ namespace App\Domain\Characters\Actions;
 use App\Domain\Characters\CharacterStatus;
 use App\Domain\Inventory\Capacity\InventoryCapacityLimits;
 use App\Models\Character;
+use App\Models\CharacterClass;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -27,8 +28,14 @@ class CreateCharacterAction
                     ]);
                 }
 
+                $adventurer = CharacterClass::query()->where('code', 'adventurer')->where('status', 'active')->lockForUpdate()->first();
+                if (!$adventurer) {
+                    throw ValidationException::withMessages(['name' => 'La clase inicial no está disponible.']);
+                }
+
                 $character = new Character();
                 $character->name = $name;
+                $character->character_class_id = $adventurer->id;
                 $character->level = 1;
                 $character->experience = 0;
                 $character->current_health = 100;

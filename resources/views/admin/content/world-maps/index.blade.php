@@ -1,0 +1,7 @@
+@extends('layouts.game')
+@section('title','Admin · Mapas')
+@section('content')
+@include('admin.content.partials.navigation') @include('admin.content.partials.messages')
+<div class="d-flex justify-content-between align-items-center mb-3"><h1>World Maps</h1><a class="btn btn-primary" href="{{ route('admin.content.world-maps.create') }}">Crear mapa</a></div>
+<table class="table"><thead><tr><th>Mapa</th><th>Contexto</th><th>Imagen</th><th>Estado</th><th>Versión</th><th></th></tr></thead><tbody>@foreach($maps as $map)<tr><td>{{ $map->name }}<br><small>{{ $map->code }}</small></td><td>{{ $map->world ? 'World · '.$map->world->name : 'Region · '.$map->region->world->name.' › '.$map->region->name }}</td><td>{{ $map->original_width ? $map->original_width.' × '.$map->original_height : 'Sin imagen' }}</td><td>{{ $map->status }} @if($map->is_default)<span class="badge bg-primary">default</span>@endif</td><td>{{ $map->version }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ route('admin.content.world-maps.editor',$map) }}">Editor</a> <a class="btn btn-sm btn-outline-secondary" href="{{ route('admin.content.world-maps.edit',$map) }}">Metadata</a></td></tr>@endforeach</tbody></table>{{ $maps->links() }}
+@endsection

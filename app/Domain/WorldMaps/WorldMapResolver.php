@@ -1,0 +1,3 @@
+<?php
+namespace App\Domain\WorldMaps;use App\Domain\WorldMaps\Exceptions\WorldMapNotResolvableException;use App\Models\Region;use App\Models\World;use App\Models\WorldMap;
+final class WorldMapResolver{public function forWorld(World $world){return$this->resolve('world_id',$world->id,'No active default map exists for this World.');}public function forRegion(Region $region){return$this->resolve('region_id',$region->id,'No active default map exists for this Region.');}private function resolve($column,$id,$message){$map=WorldMap::where($column,$id)->where('status',WorldMapStatus::ACTIVE)->where('is_default',true)->first();if(!$map)throw new WorldMapNotResolvableException($message);return$map;}}

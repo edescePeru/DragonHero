@@ -39,8 +39,8 @@ final class ItemRefinementService
             $lockedInstance = ItemInstance::whereKey($instance->id)->lockForUpdate()->firstOrFail();
             if ((int)$lockedInstance->character_id !== (int)$lockedCharacter->id || $lockedInstance->uuid !== $token['item_instance_uuid']) throw new InvalidArgumentException('ItemInstance does not belong to this Character.');
 
-            $existing = ItemInstanceEvent::where('item_instance_id',$lockedInstance->id)->where('event_type',ItemInstanceEventType::REFINEMENT_SUCCEEDED)->where('operation_uuid',$token['operation_uuid'])->lockForUpdate()->first();
-            if ($existing) return new RefinementResult($existing->metadata);
+            $existing = ItemInstanceEvent::where('item_instance_id',$lockedInstance->id)->whereIn('event_type',ItemInstanceEventType::refinementResults())->where('operation_uuid',$token['operation_uuid'])->lockForUpdate()->first();
+            if ($existing) return new RefinementResult($existing->metadata, true);
             if ((int)$token['observed_refinement_level'] !== (int)$lockedInstance->refinement_level) throw new InvalidArgumentException('Refinement operation is stale.');
             if (!in_array($lockedInstance->status,[ItemInstanceStatus::AVAILABLE,ItemInstanceStatus::EQUIPPED],true)) throw new InvalidArgumentException('ItemInstance status cannot be refined.');
             if ((int)$lockedInstance->refinement_level >= ItemInstanceLimits::MAX_REFINEMENT_LEVEL) throw new InvalidArgumentException('ItemInstance already reached maximum refinement.');
@@ -53,21 +53,29 @@ final class ItemRefinementService
             $materialRules = RefinementLevelMaterial::where('refinement_level_id',$rule->id)->orderBy('item_id')->lockForUpdate()->get();
             $materialIds = $materialRules->pluck('item_id')->map(function($id){return(int)$id;})->all();
             $materials = empty($materialIds)?collect():Item::whereIn('id',$materialIds)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
-            $quantities=[]; foreach($materialRules as $materialRule){$material=$materials->get($materialRule->item_id);if(!$material)throw new RuntimeException('Refinement material is missing.');$this->rules->validateMaterial($material,$materialRule->quantity);$quantities[(int)$material->id]=(int)$materialRule->quantity;}
+            $quantities=[];
+            foreach($materialRules as $materialRule){$material=$materials->get($materialRule->item_id);if(!$material)throw new RuntimeException('Refinement material is missing.');$this->rules->validateMaterial($material,$materialRule->quantity);$quantities[(int)$material->id]=(int)$materialRule->quantity;}
 
             $lockedWallet=CharacterWallet::where('character_id',$lockedCharacter->id)->lockForUpdate()->first();
             if(!$lockedWallet){$lockedWallet=new CharacterWallet();$lockedWallet->character_id=$lockedCharacter->id;$lockedWallet->gold_balance=0;$lockedWallet->save();}
             $inventoryRows=empty($materialIds)?collect():CharacterItem::where('character_id',$lockedCharacter->id)->whereIn('item_id',$materialIds)->orderBy('item_id')->lockForUpdate()->get();
             foreach($quantities as $materialId=>$quantity){$row=$inventoryRows->firstWhere('item_id',$materialId);if(!$row||(int)$row->quantity-(int)$row->locked_quantity<$quantity)throw new InvalidArgumentException('Insufficient refinement materials.');}
             $gold=(int)$rule->gold_cost;
-            if($gold>0)$this->wallet->debitLocked($lockedCharacter,$gold,GoldReasonCode::ITEM_REFINEMENT,'Refinement '.$token['operation_uuid'].' +'.$rule->from_level.' to +'.$rule->to_level.' rule '.$rule->id,'item_instance',(int)$lockedInstance->id,$token['operation_uuid'],$lockedWallet);
-            if(!empty($quantities))$this->inventory->withdrawMultipleLocked($lockedCharacter,$materials,$quantities,$inventoryRows);
+            if((int)$lockedWallet->gold_balance<$gold)throw new InvalidArgumentException('Insufficient gold.');
+
             $roll=$this->rng->randomInt(1,10000);
-            if($roll>(int)$rule->success_chance_basis_points)throw new RuntimeException('Unexpected refinement failure in v1.');
-            $from=(int)$lockedInstance->refinement_level;$lockedInstance->refinement_level=(int)$rule->to_level;$lockedInstance->save();
-            $now=CarbonImmutable::now();$consumed=[];foreach($quantities as $materialId=>$quantity){$material=$materials->get($materialId);$consumed[]=['item_id'=>$materialId,'item_code'=>$material->code,'item_name'=>$material->name,'quantity'=>$quantity];}
-            $payload=['schema_version'=>1,'operation_uuid'=>$token['operation_uuid'],'character_id'=>(int)$lockedCharacter->id,'item_instance_id'=>(int)$lockedInstance->id,'item_instance_uuid'=>$lockedInstance->uuid,'item_id'=>(int)$item->id,'item_code'=>$item->code,'item_name'=>$item->name,'from_level'=>$from,'to_level'=>(int)$rule->to_level,'current_level'=>(int)$lockedInstance->refinement_level,'refinement_rule_id'=>(int)$rule->id,'success_chance_basis_points'=>(int)$rule->success_chance_basis_points,'roll'=>$roll,'gold_consumed'=>$gold,'materials_consumed'=>$consumed,'instance_status'=>$lockedInstance->status,'attempted_at'=>$now->toIso8601String()];
-            $this->events->appendRefinementSucceeded($lockedInstance,$lockedCharacter,$item,$token['operation_uuid'],$payload,$now);
+            $success=$roll<=(int)$rule->success_chance_basis_points;
+            $result=$success?'succeeded':'failed';
+            $from=(int)$lockedInstance->refinement_level;
+            $attempted=(int)$rule->to_level;
+            if($gold>0)$this->wallet->debitLocked($lockedCharacter,$gold,GoldReasonCode::ITEM_REFINEMENT,'Refinement '.$result.' '.$token['operation_uuid'].' +'.$from.' to +'.$attempted.' rule '.$rule->id,'item_instance',(int)$lockedInstance->id,$token['operation_uuid'],$lockedWallet);
+            if(!empty($quantities))$this->inventory->withdrawMultipleLocked($lockedCharacter,$materials,$quantities,$inventoryRows);
+            if($success){$lockedInstance->refinement_level=$attempted;$lockedInstance->save();}
+
+            $now=CarbonImmutable::now();$consumed=[];
+            foreach($quantities as $materialId=>$quantity){$material=$materials->get($materialId);$consumed[]=['item_id'=>$materialId,'item_code'=>$material->code,'item_name'=>$material->name,'quantity'=>$quantity];}
+            $payload=['schema_version'=>2,'operation_uuid'=>$token['operation_uuid'],'character_id'=>(int)$lockedCharacter->id,'item_instance_id'=>(int)$lockedInstance->id,'item_instance_uuid'=>$lockedInstance->uuid,'item_id'=>(int)$item->id,'item_code'=>$item->code,'item_name'=>$item->name,'from_level'=>$from,'attempted_to_level'=>$attempted,'current_level'=>(int)$lockedInstance->refinement_level,'refinement_rule_id'=>(int)$rule->id,'success_chance_basis_points'=>(int)$rule->success_chance_basis_points,'roll'=>$roll,'failure_behavior'=>$rule->failure_behavior,'gold_consumed'=>$gold,'materials_consumed'=>$consumed,'instance_status'=>$lockedInstance->status,'attempted_at'=>$now->toIso8601String(),'result'=>$result];
+            if($success)$this->events->appendRefinementSucceeded($lockedInstance,$lockedCharacter,$item,$token['operation_uuid'],$payload,$now);else$this->events->appendRefinementFailed($lockedInstance,$lockedCharacter,$item,$token['operation_uuid'],$payload,$now);
             return new RefinementResult($payload);
         },3);
     }

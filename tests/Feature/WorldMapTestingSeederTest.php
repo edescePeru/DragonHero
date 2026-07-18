@@ -1,0 +1,3 @@
+<?php
+namespace Tests\Feature;use App\Models\WorldMap;use App\Models\WorldMapArea;use Database\Seeders\WorldMapTestingSeeder;use Illuminate\Foundation\Testing\RefreshDatabase;use Illuminate\Support\Facades\Storage;use Tests\TestCase;
+class WorldMapTestingSeederTest extends TestCase{use RefreshDatabase;public function test_testing_seeder_is_idempotent_and_stores_fixture(){Storage::fake('public');config(['world_maps.disk'=>'public']);$this->seed(\Database\Seeders\WorldCatalogSeeder::class);$this->seed(WorldMapTestingSeeder::class);$this->seed(WorldMapTestingSeeder::class);$this->assertSame(2,WorldMap::count());$this->assertSame(8,WorldMapArea::count());$this->assertTrue(Storage::disk('public')->exists('world-maps/testing/eldoria-test-map.png'));}}

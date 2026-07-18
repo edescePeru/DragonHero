@@ -10,6 +10,7 @@ use App\Http\Controllers\CharacterController;
 use App\Http\Controllers\WorldCatalogController;
 use App\Http\Controllers\RegionCatalogController;
 use App\Http\Controllers\ZoneCatalogController;
+use App\Http\Controllers\WorldMapController;
 use App\Http\Controllers\CharacterInventoryController;
 use App\Http\Controllers\CharacterWalletController;
 use App\Http\Controllers\CharacterHuntController;
@@ -25,6 +26,8 @@ use App\Http\Controllers\Admin\Content\ZoneMonsterController as AdminZoneMonster
 use App\Http\Controllers\Admin\Content\LootController as AdminLootController;
 use App\Http\Controllers\Admin\Content\RefinementController as AdminRefinementController;
 use App\Http\Controllers\Admin\Content\RefinementStatModifierController as AdminRefinementStatModifierController;
+use App\Http\Controllers\Admin\Content\WorldMapController as AdminWorldMapController;
+use App\Http\Controllers\Admin\Content\WorldMapAreaController as AdminWorldMapAreaController;
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', ShowLoginController::class)->name('login');
@@ -62,6 +65,10 @@ Route::middleware(['auth', 'game.navigation'])->group(function () {
 });
 
 Route::middleware(['auth', 'game.navigation', 'character.required'])->group(function () {
+    Route::get('/maps',[WorldMapController::class,'index'])->name('world-maps.index');
+    Route::get('/maps/worlds/{world}',[WorldMapController::class,'world'])->name('world-maps.world');
+    Route::get('/maps/regions/{region}',[WorldMapController::class,'region'])->name('world-maps.region');
+    Route::get('/maps/{worldMap}',[WorldMapController::class,'show'])->name('world-maps.show');
     Route::get('/worlds', [WorldCatalogController::class, 'index'])->name('worlds.index');
     Route::get('/worlds/{world}', [WorldCatalogController::class, 'show'])->name('worlds.show');
     Route::get('/regions/{region}', [RegionCatalogController::class, 'show'])->name('regions.show');
@@ -69,6 +76,12 @@ Route::middleware(['auth', 'game.navigation', 'character.required'])->group(func
 });
 
 Route::prefix('admin/content')->name('admin.content.')->middleware(['auth','game.navigation','content.admin'])->group(function(){
+    Route::get('world-maps/{worldMap}/editor',[AdminWorldMapController::class,'editor'])->name('world-maps.editor');
+    Route::resource('world-maps',AdminWorldMapController::class)->parameters(['world-maps'=>'worldMap']);
+    Route::post('world-maps/{worldMap}/areas',[AdminWorldMapAreaController::class,'store'])->name('world-maps.areas.store');
+    Route::put('world-maps/{worldMap}/areas/{worldMapArea}',[AdminWorldMapAreaController::class,'update'])->name('world-maps.areas.update');
+    Route::patch('world-maps/{worldMap}/areas/{worldMapArea}/activate',[AdminWorldMapAreaController::class,'activate'])->name('world-maps.areas.activate');
+    Route::patch('world-maps/{worldMap}/areas/{worldMapArea}/deactivate',[AdminWorldMapAreaController::class,'deactivate'])->name('world-maps.areas.deactivate');
     Route::resource('items',AdminItemController::class)->except('show');
     Route::resource('monsters',AdminMonsterController::class);
     Route::resource('zones',AdminZoneController::class);
@@ -83,6 +96,8 @@ Route::prefix('admin/content')->name('admin.content.')->middleware(['auth','game
     Route::get('refinement',[AdminRefinementController::class,'index'])->name('refinement.index');
     Route::post('refinement',[AdminRefinementController::class,'store'])->name('refinement.store');
     Route::put('refinement/{refinementLevel}',[AdminRefinementController::class,'update'])->name('refinement.update');
+    Route::patch('refinement/{refinementLevel}/activate',[AdminRefinementController::class,'activate'])->name('refinement.activate');
+    Route::patch('refinement/{refinementLevel}/deactivate',[AdminRefinementController::class,'deactivate'])->name('refinement.deactivate');
     Route::delete('refinement/{refinementLevel}',[AdminRefinementController::class,'destroy'])->name('refinement.destroy');
     Route::post('refinement/{refinementLevel}/materials',[AdminRefinementController::class,'storeMaterial'])->name('refinement.materials.store');
     Route::put('refinement/{refinementLevel}/materials/{material}',[AdminRefinementController::class,'updateMaterial'])->name('refinement.materials.update');
