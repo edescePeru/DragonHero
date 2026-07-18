@@ -1,0 +1,26 @@
+.character-overview {
+  .overview-portrait { width: 88px; height: 88px; border-radius: 1rem; object-fit: cover; flex: 0 0 auto; }
+  .overview-placeholder { display: grid; place-items: center; background: rgba($primary, .1); color: $primary; font-size: 2rem; font-weight: 700; }
+  .overview-equipment-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; }
+  .overview-slot, .overview-inventory-slot { position: relative; min-width: 0; min-height: 116px; border: 1px dashed $gray-300; border-radius: .75rem; padding: .5rem; background: $gray-100; }
+  .overview-slot--occupied, .overview-inventory-slot:not(.overview-inventory-slot--empty) { border-style: solid; background: $white; }
+  .overview-slot-label { display: block; color: $secondary; font-size: .72rem; text-align: center; margin-bottom: .35rem; }
+  .overview-item-button { position: relative; width: 100%; height: 100%; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .35rem; border: 0; background: transparent; color: inherit; padding: .25rem; }
+  .overview-item-button:focus-visible { outline: 3px solid rgba($primary, .35); border-radius: .5rem; }
+  .overview-item-button img, .overview-item-placeholder { width: 48px; height: 48px; object-fit: contain; }
+  .overview-item-placeholder { display: grid; place-items: center; border: 1px solid $gray-300; border-radius: .5rem; color: $secondary; font-size: 1.5rem; }
+  .overview-item-name { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: .76rem; line-height: 1.2; text-align: center; }
+  .overview-empty-slot { height: 78px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: $gray-500; font-size: .78rem; }
+  .overview-empty-slot i, .overview-inventory-slot--empty i { font-size: 1.4rem; }
+  .overview-inventory-grid { display: grid; grid-template-columns: repeat(10, minmax(72px, 1fr)); gap: .65rem; }
+  .overview-inventory-slot { min-height: 104px; padding: .35rem; }
+  .overview-inventory-slot--empty { display: grid; place-items: center; color: $gray-400; min-height: 104px; }
+  .overview-quantity { position: absolute; top: .1rem; right: .1rem; }
+}
+
+@media (max-width: 1199.98px) { .character-overview .overview-inventory-grid { grid-template-columns: repeat(6, minmax(72px, 1fr)); } }
+@media (max-width: 767.98px) {
+  .character-overview .overview-equipment-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .character-overview .overview-inventory-grid { grid-template-columns: repeat(4, minmax(64px, 1fr)); }
+}
+@media (max-width: 399.98px) { .character-overview .overview-inventory-grid { grid-template-columns: repeat(3, minmax(64px, 1fr)); } }

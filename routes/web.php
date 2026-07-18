@@ -18,6 +18,7 @@ use App\Http\Controllers\CharacterHuntingSessionController;
 use App\Http\Controllers\CharacterHuntRewardClaimController;
 use App\Http\Controllers\CharacterEquipmentController;
 use App\Http\Controllers\CharacterItemRefinementController;
+use App\Http\Controllers\CharacterOverviewController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Content\ItemController as AdminItemController;
 use App\Http\Controllers\Admin\Content\MonsterController as AdminMonsterController;
@@ -39,6 +40,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware(['auth', 'game.navigation'])->group(function () {
     Route::get('/characters/create', [CharacterController::class, 'create'])->name('characters.create');
     Route::post('/characters', [CharacterController::class, 'store'])->name('characters.store');
+    Route::get('/characters/{character}/overview', CharacterOverviewController::class)->name('characters.overview');
     Route::get('/characters/{character}', [CharacterController::class, 'show'])->name('characters.show');
     Route::get('/characters/{character}/inventory', [CharacterInventoryController::class, 'index'])->name('characters.inventory.index');
     Route::get('/characters/{character}/wallet', [CharacterWalletController::class, 'show'])->name('characters.wallet.show');

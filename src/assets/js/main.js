@@ -6,6 +6,7 @@ import './custom.js';
 import './world-map-editor.js';
 import './world-map-form.js';
 import './world-map-player.js';
+import './character-overview.js';
 
 
 // Import SCSS

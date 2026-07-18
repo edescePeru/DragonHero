@@ -4,7 +4,7 @@
 @section('content')
 @if(session('status'))<div class="alert alert-success">{{ session('status') }}</div>@endif
 @if($errors->has('equipment'))<div class="alert alert-danger">{{ $errors->first('equipment') }}</div>@endif
-<div class="mb-4"><h1 class="fs-3 mb-1">{{ $character->name }}</h1><p class="text-secondary">Ficha inicial del personaje</p></div>
+<div class="mb-4 d-flex flex-wrap justify-content-between align-items-start gap-2"><div><h1 class="fs-3 mb-1">{{ $character->name }}</h1><p class="text-secondary">Ficha inicial del personaje</p></div><a class="btn btn-outline-primary btn-sm" href="{{ route('characters.overview',$character) }}">Ver vista compacta</a></div>
 <div class="row g-3"><div class="col-lg-4"><div class="card h-100"><div class="card-body">
 <div class="text-center mb-3"><x-media.portrait :model="$character" :alt="'Retrato de '.$character->name" :placeholder-text="$character->name" :width="160" :height="160" class="img-fluid object-fit-cover" /></div>
 <h2 class="h4">{{ $character->name }}</h2><span class="badge bg-success">{{ ucfirst($character->status) }}</span><hr>

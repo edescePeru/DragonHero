@@ -1,0 +1,8 @@
+<section class="card h-100" aria-labelledby="overview-equipment-heading"><div class="card-header"><h2 id="overview-equipment-heading" class="h5 mb-0">Equipamiento</h2></div><div class="card-body"><div class="overview-equipment-grid">
+@foreach($overview['equipment'] as $entry)<article class="overview-slot {{ $entry['occupied'] ? 'overview-slot--occupied' : '' }}"><span class="overview-slot-label">{{ $entry['slot_label'] }}</span>
+  @if($entry['occupied'])
+    <button type="button" class="overview-item-button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ implode(' · ',$entry['details']) }}" data-overview-open-panel="equipment-{{ $entry['slot'] }}" aria-label="Ver acciones de {{ $entry['item_name'] }}">@if($entry['icon_url'])<img src="{{ $entry['icon_url'] }}" alt="">@else<span class="overview-item-placeholder" aria-hidden="true"><i class="ti ti-shield"></i></span>@endif<span class="overview-item-name">{{ $entry['item_name'] }} +{{ $entry['refinement_level'] }}</span></button>
+    <template id="equipment-{{ $entry['slot'] }}"><div data-panel-title>{{ $entry['item_name'] }} +{{ $entry['refinement_level'] }}</div><ul data-panel-details>@foreach($entry['details'] as $detail)<li>{{ $detail }}</li>@endforeach</ul><div data-panel-actions><form method="POST" action="{{ $entry['unequip_url'] }}" data-character-overview-mutation>@csrf<input type="hidden" name="slot" value="{{ $entry['slot'] }}"><button type="submit" class="btn btn-outline-danger w-100">Desequipar</button></form></div></template>
+  @else<span class="overview-empty-slot"><i class="ti ti-square-rounded"></i><span>Vacío</span></span>@endif
+</article>@endforeach
+</div></div></section>
