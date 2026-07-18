@@ -9,6 +9,7 @@ if (root) {
   const modal = Modal.getOrCreateInstance(modalElement);
   const title = modalElement.querySelector('#overview-action-title');
   const details = modalElement.querySelector('[data-overview-panel-details]');
+  const image = modalElement.querySelector('[data-overview-panel-image]');
   const actions = modalElement.querySelector('[data-overview-panel-actions]');
   const error = root.querySelector('[data-overview-error]');
 
@@ -19,9 +20,11 @@ if (root) {
       const fragment = template.content.cloneNode(true);
       const sourceTitle = fragment.querySelector('[data-panel-title]');
       const sourceDetails = fragment.querySelector('[data-panel-details]');
+      const sourceImage = fragment.querySelector('[data-panel-image]');
       const sourceActions = fragment.querySelector('[data-panel-actions]');
       title.textContent = sourceTitle ? sourceTitle.textContent : 'Objeto';
       details.replaceChildren(...(sourceDetails ? Array.from(sourceDetails.children).map((node) => node.cloneNode(true)) : []));
+      image.replaceChildren(...(sourceImage ? [sourceImage.cloneNode(true)] : []));
       actions.replaceChildren(...(sourceActions ? Array.from(sourceActions.childNodes).map((node) => node.cloneNode(true)) : []));
       modal.show();
     });
@@ -31,6 +34,13 @@ if (root) {
     const form = event.target.closest('[data-character-overview-mutation]');
     if (!form) return;
     event.preventDefault();
+    const confirmationMessage = form.dataset.confirmationMessage;
+    if (confirmationMessage && !form.querySelector('[name="confirm_conflicts"]')) {
+      if (!window.confirm(confirmationMessage)) return;
+      const confirmed = document.createElement('input');
+      confirmed.type = 'hidden'; confirmed.name = 'confirm_conflicts'; confirmed.value = '1';
+      form.appendChild(confirmed);
+    }
     const submit = form.querySelector('[type="submit"]');
     if (submit.disabled) return;
     submit.disabled = true;
@@ -42,6 +52,11 @@ if (root) {
         headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       });
       const payload = await response.json();
+      if (response.status === 409 && payload.requires_confirmation && window.confirm(payload.message)) {
+        let confirmed = form.querySelector('[name="confirm_conflicts"]');
+        if (!confirmed) { confirmed = document.createElement('input'); confirmed.type = 'hidden'; confirmed.name = 'confirm_conflicts'; form.appendChild(confirmed); }
+        confirmed.value = '1'; submit.disabled = false; form.requestSubmit(); return;
+      }
       if (!response.ok) throw new Error(payload.message || 'No se pudo completar la acción.');
       window.location.reload();
     } catch (exception) {

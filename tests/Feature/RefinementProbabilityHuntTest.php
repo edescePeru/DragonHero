@@ -38,7 +38,7 @@ class RefinementProbabilityHuntTest extends TestCase
         $character=Character::factory()->for(User::factory())->create(['base_attack'=>10]);
         $item=Item::create(['code'=>'probability_hunt_weapon','name'=>'Probability Hunt Weapon','item_type'=>'equipment','equipment_type'=>'weapon','rarity'=>'common','is_stackable'=>false,'max_stack'=>1,'attack_bonus'=>10,'status'=>'active']);
         $instance=ItemInstance::factory()->create(['character_id'=>$character->id,'item_id'=>$item->id,'refinement_level'=>0]);
-        app(CharacterEquipmentService::class)->equip($character,$instance->uuid,'weapon_main');
+        app(CharacterEquipmentService::class)->equip($character,$instance->uuid,'main_hand');
         RefinementLevel::create(['from_level'=>0,'to_level'=>1,'success_chance_basis_points'=>5000,'gold_cost'=>0,'failure_behavior'=>'keep_level','status'=>'active']);
         $zone=Zone::where('code','grey_oak_forest')->firstOrFail();
         $historical=app(HuntService::class)->start($character,$zone);$historicalSnapshot=Hunt::findOrFail($historical->huntId())->character_stats_snapshot;

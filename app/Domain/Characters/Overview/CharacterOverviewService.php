@@ -8,6 +8,8 @@ use App\Domain\Equipment\CharacterEquipmentSummaryService;
 use App\Domain\Equipment\CharacterEquipmentSlot;
 use App\Domain\Inventory\CharacterInventorySummaryService;
 use App\Domain\Media\MediaAssetType;
+use App\Domain\Media\CatalogImages\CatalogImageService;
+use App\Domain\Media\CatalogImages\CatalogImageType;
 use App\Domain\Wallet\WalletService;
 use App\Models\Character;
 use App\Models\Item;
@@ -19,19 +21,22 @@ final class CharacterOverviewService
     private $equipment;
     private $inventory;
     private $wallet;
+    private $catalogImages;
 
     public function __construct(
         CharacterStatsCalculator $stats,
         CharacterProgressionService $progression,
         CharacterEquipmentSummaryService $equipment,
         CharacterInventorySummaryService $inventory,
-        WalletService $wallet
+        WalletService $wallet,
+        CatalogImageService $catalogImages
     ) {
         $this->stats = $stats;
         $this->progression = $progression;
         $this->equipment = $equipment;
         $this->inventory = $inventory;
         $this->wallet = $wallet;
+        $this->catalogImages = $catalogImages;
     }
 
     public function snapshot(Character $character): array
@@ -55,6 +60,12 @@ final class CharacterOverviewService
             $item = $entry['item_id'] ? $items->get($entry['item_id']) : null;
             return $this->equipmentRow($entry, $item, $character);
         }, $equipment);
+        $equipmentRows[] = [
+            'slot' => 'pet', 'slot_label' => 'Mascota', 'occupied' => false,
+            'visual_only' => true, 'coming_soon' => true,
+            'details' => ['Las mascotas estaran disponibles proximamente.'],
+            'unequip_url' => null, 'detail_icon_url' => null,
+        ];
 
         $inventoryRows = [];
         foreach ($inventory['stackable_items'] as $entry) {
@@ -118,10 +129,12 @@ final class CharacterOverviewService
     private function equipmentRow(array $entry, $item, Character $character): array
     {
         if (!$entry['occupied']) {
-            return array_merge($entry, ['details' => ['Slot disponible'], 'unequip_url' => null]);
+            return array_merge($entry, ['details' => ['Slot disponible'], 'unequip_url' => null, 'detail_icon_url' => null]);
         }
 
         return array_merge($entry, [
+            'icon_url' => $this->iconUrl($item, 64),
+            'detail_icon_url' => $this->iconUrl($item, 128),
             'details' => $this->itemDetails($item, $entry['refinement_level'], $entry['total_bonuses']),
             'unequip_url' => route('characters.equipment.unequip', $character),
         ]);
@@ -132,7 +145,8 @@ final class CharacterOverviewService
         return [
             'kind' => 'stackable',
             'name' => $entry['item_name'],
-            'icon_url' => $this->iconUrl($item),
+            'icon_url' => $this->iconUrl($item, 64),
+            'detail_icon_url' => $this->iconUrl($item, 128),
             'quantity' => $entry['quantity'],
             'locked_quantity' => $entry['locked_quantity'],
             'details' => array_merge($this->itemDetails($item, null, []), [
@@ -153,13 +167,15 @@ final class CharacterOverviewService
                 'eligible' => (bool) $eligibility['eligible'],
                 'message' => $eligibility['message'],
                 'url' => route('characters.equipment.equip', $character),
+                'loadout' => isset($eligibility['loadout']) ? $eligibility['loadout'] : null,
             ];
         }
 
         return [
             'kind' => 'instance',
             'name' => $entry['item_name'],
-            'icon_url' => $this->iconUrl($item),
+            'icon_url' => $this->iconUrl($item, 64),
+            'detail_icon_url' => $this->iconUrl($item, 128),
             'quantity' => 1,
             'locked_quantity' => 0,
             'instance_uuid' => $entry['uuid'],
@@ -198,10 +214,10 @@ final class CharacterOverviewService
         return $details;
     }
 
-    private function iconUrl($item)
+    private function iconUrl($item, $size)
     {
-        $asset = $item ? $item->mediaAssets->first() : null;
-        return $asset ? $asset->url() : null;
+        if (!$item) return $this->catalogImages->presentation(CatalogImageType::ITEM)->url($size);
+        return $this->catalogImages->presentationFor($item, CatalogImageType::ITEM)->url($size);
     }
 
     private function statsRows($stats): array

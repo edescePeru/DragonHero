@@ -1,0 +1,4 @@
+<?php
+namespace App\Domain\Media\CatalogImages;
+use App\Domain\Media\MediaAssetType;use App\Models\Item;use App\Models\Monster;use Illuminate\Database\Eloquent\Model;use InvalidArgumentException;
+final class CatalogImageType{const ITEM='item';const MONSTER='monster';public static function values(){return[self::ITEM,self::MONSTER];}public static function assetType($type){if($type===self::ITEM)return MediaAssetType::ICON;if($type===self::MONSTER)return MediaAssetType::PORTRAIT;throw new InvalidArgumentException('Tipo de catálogo de imagen no válido.');}public static function directory($type){self::assetType($type);return $type===self::ITEM?'items':'monsters';}public static function assertModel($type,Model $model){if(($type===self::ITEM&&$model instanceof Item)||($type===self::MONSTER&&$model instanceof Monster))return;throw new InvalidArgumentException('El modelo no corresponde al tipo de imagen de catálogo.');}}

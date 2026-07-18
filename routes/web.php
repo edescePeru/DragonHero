@@ -84,6 +84,8 @@ Route::prefix('admin/content')->name('admin.content.')->middleware(['auth','game
     Route::put('world-maps/{worldMap}/areas/{worldMapArea}',[AdminWorldMapAreaController::class,'update'])->name('world-maps.areas.update');
     Route::patch('world-maps/{worldMap}/areas/{worldMapArea}/activate',[AdminWorldMapAreaController::class,'activate'])->name('world-maps.areas.activate');
     Route::patch('world-maps/{worldMap}/areas/{worldMapArea}/deactivate',[AdminWorldMapAreaController::class,'deactivate'])->name('world-maps.areas.deactivate');
+    Route::delete('items/{item}/image',[AdminItemController::class,'destroyImage'])->name('items.image.destroy');
+    Route::delete('monsters/{monster}/image',[AdminMonsterController::class,'destroyImage'])->name('monsters.image.destroy');
     Route::resource('items',AdminItemController::class)->except('show');
     Route::resource('monsters',AdminMonsterController::class);
     Route::resource('zones',AdminZoneController::class);

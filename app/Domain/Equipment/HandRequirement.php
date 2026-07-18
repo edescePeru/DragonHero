@@ -1,0 +1,3 @@
+<?php
+namespace App\Domain\Equipment;use InvalidArgumentException;
+final class HandRequirement{const ONE_HAND='one_hand';const TWO_HAND='two_hand';const OFF_HAND_ONLY='off_hand_only';public static function all(){return[self::ONE_HAND,self::TWO_HAND,self::OFF_HAND_ONLY];}public static function labels(){return[self::ONE_HAND=>'Una mano',self::TWO_HAND=>'Dos manos',self::OFF_HAND_ONLY=>'Solo mano secundaria'];}public static function assertValid($value){if(!is_string($value)||!in_array($value,self::all(),true))throw new InvalidArgumentException('Requisito de manos no valido.');return$value;}private function __construct(){}}

@@ -66,7 +66,7 @@ class ItemRefinementTest extends TestCase
     public function test_failure_consumes_resources_preserves_instance_equipment_stats_and_health()
     {
         $data=$this->fixture(8000);
-        app(CharacterEquipmentService::class)->equip($data['character'],$data['instance']->uuid,'weapon_main');
+        app(CharacterEquipmentService::class)->equip($data['character'],$data['instance']->uuid,'main_hand');
         $beforeStats=$this->statsArray(app(\App\Domain\Characters\CharacterStatsCalculator::class)->calculate($data['character']));
         $identity=$data['instance']->fresh()->only(['uuid','item_id','status']);
         $service=$this->serviceWithRolls([8001],$rng);
@@ -76,7 +76,7 @@ class ItemRefinementTest extends TestCase
         $this->assertSame(8,(int)CharacterItem::where('character_id',$data['character']->id)->where('item_id',$data['material']->id)->value('quantity'));
         $fresh=$data['instance']->fresh();$this->assertSame($identity,$fresh->only(['uuid','item_id','status']));$this->assertSame(0,$fresh->refinement_level);$this->assertSame(77,$data['character']->fresh()->current_health);
         $this->assertSame($beforeStats,$this->statsArray(app(\App\Domain\Characters\CharacterStatsCalculator::class)->calculate($data['character']->fresh())));
-        $this->assertDatabaseHas('character_equipment',['character_id'=>$data['character']->id,'item_instance_id'=>$fresh->id,'slot'=>'weapon_main']);
+        $this->assertDatabaseHas('character_equipment',['character_id'=>$data['character']->id,'item_instance_id'=>$fresh->id,'slot'=>'main_hand']);
         $this->assertSame(1,ItemInstanceEvent::where('event_type',ItemInstanceEventType::REFINEMENT_FAILED)->count());$this->assertSame(0,ItemInstanceEvent::where('event_type',ItemInstanceEventType::REFINEMENT_SUCCEEDED)->count());$this->assertSame(1,GoldTransaction::where('reason_code',GoldReasonCode::ITEM_REFINEMENT)->count());
     }
 
@@ -126,7 +126,7 @@ class ItemRefinementTest extends TestCase
         $this->assertTrue($result->success());
         $this->assertSame(1,$data['instance']->fresh()->refinement_level);
         $item=$data['equipment']->fresh();
-        $eligibility=app(EquipmentEligibilityService::class)->evaluate($data['character']->fresh(),$data['instance']->fresh(),$item,'weapon_main',$item->allowedCharacterClasses()->get(),$data['character']->characterClass);
+        $eligibility=app(EquipmentEligibilityService::class)->evaluate($data['character']->fresh(),$data['instance']->fresh(),$item,'main_hand',$item->allowedCharacterClasses()->get(),$data['character']->characterClass);
         $this->assertFalse($eligibility->eligible());
         $this->assertContains('level_requirement_not_met',$eligibility->reasonCodes());
     }

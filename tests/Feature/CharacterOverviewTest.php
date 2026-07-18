@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Domain\Equipment\CharacterEquipmentService;
 use App\Domain\Equipment\CharacterEquipmentSlot;
 use App\Domain\Inventory\Instances\ItemInstanceStatus;
+use App\Domain\Media\CatalogImages\CatalogImageService;
+use App\Domain\Media\CatalogImages\CatalogImageType;
 use App\Models\Character;
 use App\Models\CharacterItem;
 use App\Models\Item;
@@ -13,6 +15,8 @@ use App\Models\User;
 use Database\Seeders\CharacterLevelRequirementSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -64,7 +68,7 @@ class CharacterOverviewTest extends TestCase
         $character = Character::factory()->create();
         $weapon = $this->uniqueItem('equipped_overview', 'Arma equipada');
         $instance = $this->createItemInstance($character, $weapon);
-        app(CharacterEquipmentService::class)->equip($character, $instance->uuid, CharacterEquipmentSlot::WEAPON_MAIN);
+        app(CharacterEquipmentService::class)->equip($character, $instance->uuid, CharacterEquipmentSlot::MAIN_HAND);
 
         $response = $this->actingAs($character->user)->get(route('characters.overview', $character));
 
@@ -105,6 +109,32 @@ class CharacterOverviewTest extends TestCase
         $this->assertStringContainsString('replaceChildren', $script);
         $this->assertStringContainsString("Accept: 'application/json'", $script);
         $this->assertStringNotContainsString('innerHTML', $script);
+    }
+
+    public function test_overview_uses_item_variant_64_and_detail_variant_128_with_fallback()
+    {
+        Storage::fake('public');
+        $character = Character::factory()->create();
+        $item = $this->stackableItem('overview_variants', 'Objeto con variantes', 20);
+        CharacterItem::create(['character_id' => $character->id, 'item_id' => $item->id, 'quantity' => 2, 'locked_quantity' => 0]);
+        $path = tempnam(sys_get_temp_dir(), 'overview_image_');
+        $image = imagecreatetruecolor(48, 80);
+        imagefill($image, 0, 0, imagecolorallocate($image, 40, 120, 200));
+        imagepng($image, $path);
+        imagedestroy($image);
+        $asset = app(CatalogImageService::class)->replace($item, CatalogImageType::ITEM, new UploadedFile($path, 'item.png', 'image/png', null, true));
+        unlink($path);
+
+        $response = $this->actingAs($character->user)->get(route('characters.overview', $character));
+        $response->assertOk()
+            ->assertSee(Storage::disk('public')->url($asset->metadata['variants']['64']), false)
+            ->assertSee(Storage::disk('public')->url($asset->metadata['variants']['128']), false)
+            ->assertSee('width="64"', false)
+            ->assertSee('width="128"', false);
+
+        $fallbackItem = $this->stackableItem('overview_fallback', 'Objeto sin imagen', 20);
+        CharacterItem::create(['character_id' => $character->id, 'item_id' => $fallbackItem->id, 'quantity' => 1, 'locked_quantity' => 0]);
+        $this->get(route('characters.overview', $character))->assertSee('default-item-64.webp', false);
     }
 
     private function stackableItem($code, $name, $maxStack)

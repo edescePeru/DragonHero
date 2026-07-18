@@ -2,7 +2,7 @@
 @section('title','Admin · '.$monster->name)
 @section('content')
 @include('admin.content.partials.navigation') @include('admin.content.partials.messages')
-<div class="d-flex justify-content-between mb-3"><h1>{{ $monster->name }}</h1><a class="btn btn-outline-primary" href="{{ route('admin.content.monsters.edit',$monster) }}">Editar estadísticas</a></div>
+<div class="d-flex justify-content-between mb-3"><div class="d-flex align-items-center gap-3"><img src="{{ $catalogImage->url128() }}" alt="Retrato de {{ $monster->name }}" width="128" height="128" class="catalog-image-preview"><h1>{{ $monster->name }}</h1></div><a class="btn btn-outline-primary" href="{{ route('admin.content.monsters.edit',$monster) }}">Editar estadísticas</a></div>
 <div class="card mb-3"><div class="card-body"><div class="row">@foreach(['code','level','max_health','attack','defense','accuracy_rate','evasion_rate','critical_chance','experience_reward','gold_min','gold_max','status'] as $field)<div class="col-md-3 mb-2"><small>{{ $field }}</small><strong class="d-block">{{ $monster->{$field} }}</strong></div>@endforeach</div></div></div>
 <h2 class="h4">Zonas</h2><ul>@forelse($monster->zones as $zone)<li>{{ $zone->region->world->name }} › {{ $zone->region->name }} › {{ $zone->name }} (peso {{ $zone->pivot->weight }})</li>@empty<li>Sin zonas</li>@endforelse</ul>
 <h2 class="h4 mt-4">Loot configurado</h2><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Item</th><th>Probabilidad</th><th>Cantidad</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
