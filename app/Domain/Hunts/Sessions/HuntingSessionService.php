@@ -14,6 +14,8 @@ use App\Domain\Hunts\Sessions\Data\HuntingSessionResult;
 use App\Domain\Hunts\Sessions\Data\HuntingSessionTickResult;
 use App\Domain\Hunts\Sessions\Exceptions\ActiveHuntingSessionExistsException;
 use App\Domain\Hunts\Sessions\Exceptions\HuntingSessionOwnershipException;
+use App\Domain\Combat\Manual\ManualCombatHuntingSessionLifecycleService;
+use App\Domain\Combat\Manual\ManualCombatStatus;
 use App\Domain\Inventory\Capacity\Exceptions\InsufficientPendingRewardCapacityException;
 use App\Domain\Inventory\Capacity\PendingRewardCapacityService;
 use App\Domain\Media\MediaAssetType;
@@ -39,14 +41,16 @@ final class HuntingSessionService
     private $playback;
     private $initialHistory;
     private $presentation;
+    private $manualCombatSessions;
 
-    public function __construct(HuntService $hunts, HuntRewardService $rewards, PendingRewardCapacityService $capacity, HuntingPlaybackCalculator $playback, HuntingSessionPresentationService $presentation)
+    public function __construct(HuntService $hunts, HuntRewardService $rewards, PendingRewardCapacityService $capacity, HuntingPlaybackCalculator $playback, HuntingSessionPresentationService $presentation, ManualCombatHuntingSessionLifecycleService $manualCombatSessions)
     {
         $this->hunts = $hunts;
         $this->rewards = $rewards;
         $this->capacity = $capacity;
         $this->playback = $playback;
         $this->presentation = $presentation;
+        $this->manualCombatSessions = $manualCombatSessions;
     }
 
     public function start(Character $character, Zone $zone): HuntingSessionResult
@@ -56,7 +60,9 @@ final class HuntingSessionService
             $lockedCharacter = Character::whereKey($character->id)->lockForUpdate()->firstOrFail();
             $running = HuntingSession::where('character_id', $lockedCharacter->id)->where('status', HuntingSessionStatus::RUNNING)->lockForUpdate()->get();
             foreach ($running as $old) {
-                if ($this->heartbeatExpired($old, $now)) {
+                if ($this->recoverTerminalManualCombatSession($old, $now)) {
+                    continue;
+                } elseif ($this->heartbeatExpired($old, $now)) {
                     $this->stopLocked($old, HuntingSessionStopReason::HEARTBEAT_TIMEOUT, $now);
                 } else {
                     throw new ActiveHuntingSessionExistsException('El personaje ya tiene una sesión activa.');
@@ -204,6 +210,15 @@ final class HuntingSessionService
     }
 
     private function heartbeatExpired(HuntingSession $session, CarbonImmutable $now){return $now->gt(CarbonImmutable::instance($session->last_heartbeat_at)->addSeconds(HuntingSessionLimits::CONNECTED_HEARTBEAT_TIMEOUT_SECONDS));}
+    private function recoverTerminalManualCombatSession(HuntingSession $session, CarbonImmutable $now)
+    {
+        $linked = CombatSession::where('hunting_session_id', $session->id)->orderBy('id')->get();
+        if ($linked->isEmpty()) return false;
+        if ($linked->contains(function ($combat) { return $combat->active_slot !== null || !in_array($combat->status, ManualCombatStatus::terminalValues(), true); })) return false;
+        $terminal = $linked->last();
+        $this->manualCombatSessions->stopRelatedSessionLocked($terminal, $terminal->status, $now);
+        return true;
+    }
     private function stopLocked(HuntingSession $session, $reason, CarbonImmutable $now){$session->status=HuntingSessionStatus::STOPPED;$session->stop_reason=$reason;$session->stopped_at=$now;$session->next_encounter_at=null;$session->save();}
     private function characterAvailable(Character $character){return $character->status === 'active';}
     private function basicZoneAvailable(Zone $zone){return $zone->status === CatalogStatus::ACTIVE && (bool) $zone->allows_hunting;}

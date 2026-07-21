@@ -145,6 +145,7 @@ class ManualCombatUiTest extends TestCase
         $this->assertStringContainsString("byId('manual-combat-log').prepend(row)", $javascript);
         $this->assertStringNotContainsString("byId('manual-combat-log').appendChild(row)", $javascript);
         $this->assertStringContainsString('lastEventSequence = Math.max(lastEventSequence, Number(event.sequence))', $javascript);
+        $this->assertStringContainsString("byId('manual-combat-abandon').classList.toggle('d-none', !current.can_abandon)", $javascript);
     }
 
     public function test_manual_layout_uses_zone_background_and_frozen_combat_stats()

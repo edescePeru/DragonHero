@@ -32,7 +32,7 @@ La expiración es perezosa y se comprueba bajo locks al leer, actuar, abandonar,
 
 El flujo normal resuelve todos los turnos de Monster en la transacción que inicia o procesa una acción. Por eso no existe un endpoint `/resume`. Al reabrir un dato histórico que quedó `active`, la lectura ejecuta internamente `ManualCombatTurnService`, salvo que exista una `CombatActionRequest` en `processing`; se detiene en `waiting_player` o en un estado terminal y versiona el cambio una sola vez.
 
-Mientras `active_slot` está ocupado, HuntingSession mantiene heartbeat sin crear un Hunt automático. Después de cualquier estado terminal, el slot queda libre y el siguiente tick retoma las reglas y temporizadores ya persistidos; el ciclo de vida manual no modifica `next_encounter_at` ni cooldowns.
+Mientras `active_slot` está ocupado, HuntingSession mantiene heartbeat sin crear un Hunt automático. Al alcanzar `won`, `lost`, `abandoned` o `expired`, la misma transacción libera el slot y detiene la HuntingSession vinculada explícitamente por `hunting_session_id`; registra una razón `manual_combat_*`, fija `stopped_at` y limpia `next_encounter_at`. Esa sesión no se reutiliza como cacería automática: el jugador debe iniciar una nueva. `HuntingSessionService::start()` recupera de forma perezosa las sesiones antiguas que quedaron `running` por este defecto únicamente cuando tienen un combate terminal vinculado y ningún combate activo vinculado.
 
 El núcleo representa participantes inmutables agrupados explícitamente en `players` y `enemies`. Cada `CombatParticipantState` conserva estadísticas, vida, bando y posición. Los identifiers deben ser únicos; el futuro constructor de encuentros asignará identificadores de aparición como `grey_wolf:1` y `grey_wolf:2`.
 

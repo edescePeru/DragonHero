@@ -1,0 +1,14 @@
+<section class="card mt-3" data-zone-background-preview data-current-url="{{ $combatBackground['url'] }}">
+ <div class="card-header"><h2 class="h5 mb-0">Escenario de combate</h2></div>
+ <div class="card-body">
+  <p>Este escenario será utilizado por <strong>Cacería automática</strong> y <strong>Combate manual</strong>.</p>
+  <div class="border rounded overflow-hidden bg-light mb-3" style="height:24rem;background-size:cover;background-position:center;{{ $combatBackground['url'] ? "background-image:url('".$combatBackground['url']."')" : '' }}" data-zone-background-target><div class="h-100 d-flex align-items-center justify-content-center text-secondary{{ $combatBackground['exists'] ? ' d-none' : '' }}" data-zone-background-placeholder>Sin escenario configurado</div></div>
+  <dl class="row small mb-3" data-zone-background-details><dt class="col-sm-3">Archivo</dt><dd class="col-sm-9" data-zone-background-name>{{ $combatBackground['name'] ?: '—' }}</dd><dt class="col-sm-3">Resolución</dt><dd class="col-sm-9" data-zone-background-resolution>{{ $combatBackground['exists'] ? $combatBackground['width'].' × '.$combatBackground['height'].' px' : '—' }}</dd><dt class="col-sm-3">Tamaño</dt><dd class="col-sm-9" data-zone-background-size>{{ $combatBackground['size_label'] ?: '—' }}</dd><dt class="col-sm-3">Formato</dt><dd class="col-sm-9" data-zone-background-format>{{ $combatBackground['format'] ?: '—' }}</dd></dl>
+  <label class="form-label" for="combat-background">{{ $combatBackground['exists'] ? 'Reemplazar escenario' : 'Seleccionar escenario' }}</label>
+  <input id="combat-background" class="form-control @error('combat_background') is-invalid @enderror" type="file" name="combat_background" accept="image/png,image/jpeg,image/webp" data-zone-background-input>
+  @error('combat_background')<div class="invalid-feedback">{{ $message }}</div>@enderror
+  <div class="form-text">PNG, JPG o WebP, máximo 5 MB. Recomendado: 1920 × 1080 px y relación 16:9. La recomendación no es un requisito obligatorio.</div>
+  <button class="btn btn-sm btn-outline-secondary mt-2 d-none" type="button" data-zone-background-clear>Limpiar selección</button>
+  @if($zone->exists && $combatBackground['exists'])<div class="form-check mt-3"><input type="hidden" name="remove_combat_background" value="0"><input class="form-check-input @error('remove_combat_background') is-invalid @enderror" type="checkbox" name="remove_combat_background" value="1" id="remove-combat-background" @if(old('remove_combat_background')) checked @endif><label class="form-check-label" for="remove-combat-background">Eliminar el escenario actual al guardar</label>@error('remove_combat_background')<div class="invalid-feedback">{{ $message }}</div>@enderror</div>@else<input type="hidden" name="remove_combat_background" value="0">@endif
+ </div>
+</section>

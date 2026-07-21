@@ -8,8 +8,8 @@ use InvalidArgumentException;
 use RuntimeException;
 final class ManualCombatTerminationService
 {
-    private $events;private $forfeit;
-    public function __construct(ManualCombatEventService $events,ManualCombatRewardForfeitService $forfeit){$this->events=$events;$this->forfeit=$forfeit;}
+    private $events;private $forfeit;private $huntingSessions;
+    public function __construct(ManualCombatEventService $events,ManualCombatRewardForfeitService $forfeit,ManualCombatHuntingSessionLifecycleService $huntingSessions){$this->events=$events;$this->forfeit=$forfeit;$this->huntingSessions=$huntingSessions;}
     public function abandonLocked(CombatSession $combat,CarbonImmutable $now)
     {return$this->terminateLocked($combat,ManualCombatStatus::ABANDONED,ManualCombatEventType::COMBAT_ABANDONED,'player_abandoned','abandoned',$now,[]);}
     public function expireLocked(CombatSession $combat,CarbonImmutable $now,$minutes)
@@ -22,6 +22,7 @@ final class ManualCombatTerminationService
         $payload=array_merge(['version'=>1,'reason'=>$eventReason,'status'=>$status,'round'=>(int)$combat->round_number],$extra);
         $this->events->append($combat,$eventType,(int)$combat->round_number,null,$payload);
         $this->forfeit->forfeitLocked($combat,$forfeitReason,$now);
+        $this->huntingSessions->stopRelatedSessionLocked($combat,$status,$now);
         return$combat;
     }
 }

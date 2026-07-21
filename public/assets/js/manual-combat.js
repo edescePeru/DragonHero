@@ -114,7 +114,7 @@
         state = current; byId('manual-combat-status').textContent = current.status; byId('manual-combat-round').textContent = String(current.round); byId('manual-combat-turn').textContent = current.status === 'waiting_player' ? 'Tu turno' : (current.current_participant_id ? 'Turno de ' + participantName(current.current_participant_id) : 'Sin turno activo');
         renderParticipants(current); renderRewards(current.rewards); renderTerminal(current); renderExpiration(current); appendEvents(events || current.events);
         var canAttack = !requestInFlight && current.status === 'waiting_player' && (current.actions_available || []).indexOf('basic_attack') !== -1 && selectedTargetId !== null;
-        byId('manual-combat-attack').disabled = !canAttack; byId('manual-combat-abandon').disabled = requestInFlight || !current.can_abandon; byId('manual-combat-loader').classList.toggle('d-none', !requestInFlight);
+        byId('manual-combat-attack').disabled = !canAttack; byId('manual-combat-abandon').disabled = requestInFlight || !current.can_abandon; byId('manual-combat-abandon').classList.toggle('d-none', !current.can_abandon); byId('manual-combat-loader').classList.toggle('d-none', !requestInFlight);
     }
     function loadCombatState(incremental) {
         var url = config.stateUrl + (incremental && lastEventSequence ? '?after_sequence=' + lastEventSequence : '');

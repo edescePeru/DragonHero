@@ -9,6 +9,10 @@ Las escrituras pasan por Form Requests y `ContentAdminService`, que reutiliza lo
 Los endpoints DELETE de Items, Monsters y Zones nunca borran filas: cambian el estado a `inactive`. Esto preserva Hunts, rewards, inventarios, equipamiento y eventos históricos. Retirar un Monster de una Zone sí elimina exclusivamente la configuración mutable de la tabla pivote.
 
 Zones mantienen la jerarquía `World → Region → Zone`; se persiste `region_id` y no existe `world_id` redundante. Loot almacena puntos base. La conversión a porcentaje es solo visual: `10000 = 100%` y `7000 = 70%`.
+# Escenario de Zone
+
+Create y edit de Zones permiten cargar y previsualizar el fondo compartido por cacería automática y combate manual. El formulario usa `combat_background`; `remove_combat_background` solo elimina el fondo actual al guardar. Un input vacío conserva el recurso existente. La vista previa replica `background-size: cover` y `background-position: center`, y muestra nombre, resolución, tamaño y formato sin consultar desde Blade.
+
 # Reglas de refinamiento
 
 `/admin/content/refinement` administra transiciones y materiales. En v1 solo acepta 10000 puntos base y `keep_level`; las reglas se desactivan en vez de eliminarse para preservar la historia.

@@ -15,6 +15,8 @@ use App\Domain\Combat\Manual\AutomaticCombatActionSelector;
 use App\Domain\Combat\Manual\CombatStateRebuilder;
 use App\Domain\Combat\Manual\ManualCombatStatePersistenceService;
 use App\Domain\Hunts\Sessions\HuntingSessionService;
+use App\Domain\Hunts\Sessions\HuntingSessionStatus;
+use App\Domain\Hunts\Sessions\HuntingSessionStopReason;
 use App\Domain\Random\RandomNumberGenerator;
 use App\Models\Character;
 use App\Models\CharacterItem;
@@ -80,6 +82,7 @@ class ManualCombatActionTest extends TestCase
         $response->assertOk()->assertJsonPath('idempotent_replay',false)->assertJsonPath('combat.status',ManualCombatStatus::WON)->assertJsonPath('combat.actions_available',[]);
         $this->assertSame(0,$target->fresh()->current_hp);$this->assertSame(CombatParticipantStatus::DEFEATED,$target->fresh()->status);
         $this->assertNull($combat->fresh()->active_slot);$this->assertNull($combat->fresh()->current_participant_id);$this->assertNotNull($combat->fresh()->completed_at);
+        $hunting=HuntingSession::findOrFail($combat->hunting_session_id);$this->assertSame(HuntingSessionStatus::STOPPED,$hunting->status);$this->assertSame(HuntingSessionStopReason::MANUAL_COMBAT_WON,$hunting->stop_reason);$this->assertNull($hunting->next_encounter_at);app(HuntingSessionService::class)->start($character,$combat->zone);
         $types=collect($response->json('events'))->pluck('type');$this->assertContains(ManualCombatEventType::BASIC_ATTACK,$types);$this->assertContains(ManualCombatEventType::PARTICIPANT_DEFEATED,$types);$this->assertContains(ManualCombatEventType::COMBAT_WON,$types);
         $this->assertArrayNotHasKey('rolls',$response->json('events.0.payload'));$this->assertArrayHasKey('rolls',CombatEvent::where('event_type',ManualCombatEventType::BASIC_ATTACK)->latest('id')->first()->payload);
         $count=CombatEvent::count();$randomCalls=$rng->calls;$replay=$this->actingAs($character->user)->postJson(route('characters.manual-combats.actions.store',[$character,$combat]),$this->payload($combat,$target,$uuid));
@@ -134,6 +137,7 @@ class ManualCombatActionTest extends TestCase
         $loser=$this->player();$lossCombat=$this->combat($loser);$lossPlayer=$lossCombat->participants()->where('participant_type',CombatParticipantType::CHARACTER)->firstOrFail();$lossMonster=$this->target($lossCombat);$lossPlayer->update(['current_hp'=>1,'initiative_position'=>2]);$monsterStats=$lossMonster->stats_snapshot;$monsterStats['attack']=500;$lossMonster->update(['initiative_position'=>1,'stats_snapshot'=>$monsterStats]);$lossCombat->update(['status'=>ManualCombatStatus::ACTIVE,'current_participant_id'=>$lossMonster->id]);$lossRng=new ManualCombatActionSequenceRandom([1,10000]);$order=new CombatTurnOrder();$lossTurns=new ManualCombatTurnService(new CombatStateRebuilder($order),new AutomaticCombatActionSelector(),new CombatActionResolver($lossRng,$order),app(ManualCombatStatePersistenceService::class));
         DB::transaction(function()use($lossCombat,$lossTurns){$locked=CombatSession::whereKey($lossCombat->id)->lockForUpdate()->first();$participants=CombatParticipant::where('combat_session_id',$lossCombat->id)->orderBy('id')->lockForUpdate()->get();$lossTurns->advanceAutomaticLocked($locked,$participants);});
         $this->assertSame(0,$lossPlayer->fresh()->current_hp);$this->assertSame(ManualCombatStatus::LOST,$lossCombat->fresh()->status);$this->assertNull($lossCombat->fresh()->active_slot);
+        $lossHunting=HuntingSession::findOrFail($lossCombat->hunting_session_id);$this->assertSame(HuntingSessionStatus::STOPPED,$lossHunting->status);$this->assertSame(HuntingSessionStopReason::MANUAL_COMBAT_LOST,$lossHunting->stop_reason);app(HuntingSessionService::class)->start($loser,$lossCombat->zone);
         $this->assertSame(1,CombatEvent::where('combat_session_id',$lossCombat->id)->where('event_type',ManualCombatEventType::COMBAT_LOST)->count());
     }
 

@@ -59,6 +59,12 @@ Los componentes disponibles son:
 El inventario conserva sus DTO `InventoryEntry`; el controlador crea por separado un mapa de modelos Item con sus iconos ya cargados. Si falta un Item, el DTO sigue mostrándose con placeholder y sin consulta individual.
 
 El componente sprite representa por ahora el sprite sheet como una imagen estática. La lectura de metadata, reproducción de frames y animación se implementarán en una fase posterior.
+## Escenario de combate de Zone
+
+El escenario se representa exclusivamente como el `MediaAsset` primario de tipo `background` de una `Zone`. `ZoneCombatBackgroundService` es la autoridad de carga, reemplazo, eliminación física y limpieza ante rollback. Los formularios no controlan `disk`, `path`, alias polimórfico, tipo ni condición primaria.
+
+Los archivos se almacenan en el disk `public` bajo una ruta generada por el servidor. PNG, JPG y WebP son válidos hasta 5 MB. 1920 × 1080 y 16:9 son recomendaciones visuales, no requisitos de proporción. Cacería automática y combate manual continúan consumiendo el mismo BACKGROUND primario y mantienen su fallback transparente cuando falta.
+
 # Banner de la Home
 
 `home_card_banner` es un recurso primario 1200 × 400 exclusivo de `GameHomeCard`. No se mezcla con iconos, retratos, cuerpos ni capas equipadas. Véase `docs/GAME_HOME_CARDS.md`.

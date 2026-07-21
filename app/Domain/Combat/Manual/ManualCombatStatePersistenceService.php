@@ -14,9 +14,9 @@ use InvalidArgumentException;
 
 final class ManualCombatStatePersistenceService
 {
-    private $events; private $rewardGeneration; private $rewardLifecycle;
+    private $events; private $rewardGeneration; private $rewardLifecycle; private $huntingSessions;
 
-    public function __construct(ManualCombatEventService $events, ManualCombatRewardGenerationService $rewardGeneration, ManualCombatRewardLifecycleService $rewardLifecycle) { $this->events = $events; $this->rewardGeneration = $rewardGeneration; $this->rewardLifecycle = $rewardLifecycle; }
+    public function __construct(ManualCombatEventService $events, ManualCombatRewardGenerationService $rewardGeneration, ManualCombatRewardLifecycleService $rewardLifecycle, ManualCombatHuntingSessionLifecycleService $huntingSessions) { $this->events = $events; $this->rewardGeneration = $rewardGeneration; $this->rewardLifecycle = $rewardLifecycle; $this->huntingSessions = $huntingSessions; }
 
     public function apply(CombatSession $combat, $participants, CombatStepResult $step)
     {
@@ -73,6 +73,7 @@ final class ManualCombatStatePersistenceService
             $combat->save();
             if ($won) $this->rewardLifecycle->victoryLocked(Character::whereKey($combat->character_id)->firstOrFail(), $combat);
             else $this->rewardLifecycle->defeatLocked($combat);
+            $this->huntingSessions->stopRelatedSessionLocked($combat, $combat->status, CarbonImmutable::now());
             return;
         }
 
