@@ -1,0 +1,3 @@
+<?php
+use Illuminate\Database\Migrations\Migration;use Illuminate\Database\Schema\Blueprint;use Illuminate\Support\Facades\Schema;
+class AddCharacterTemplateIdToCharacters extends Migration{public function up(){Schema::table('characters',function(Blueprint $t){$t->unsignedBigInteger('character_template_id')->nullable()->after('character_class_id');$t->index('character_template_id','characters_template_index');$t->foreign('character_template_id','characters_template_foreign')->references('id')->on('character_templates')->onDelete('restrict');});}public function down(){Schema::table('characters',function(Blueprint $t){$t->dropForeign('characters_template_foreign');$t->dropIndex('characters_template_index');$t->dropColumn('character_template_id');});}}

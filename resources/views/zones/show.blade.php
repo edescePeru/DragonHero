@@ -5,8 +5,12 @@
 <h1 class="fs-3">{{ $zone->name }}</h1>
 <p>Nivel recomendado: {{ $zone->recommended_level_min }} - {{ $zone->recommended_level_max ?: 'Sin límite' }}</p>
 @if($errors->has('hunt'))<div class="alert alert-warning">{{ $errors->first('hunt') }}</div>@endif
-@if($navigationCharacter && $zone->status === 'active' && $zone->allows_hunting)<form method="POST" action="{{ route('characters.hunts.store',[$navigationCharacter,$zone]) }}" class="mb-4" onsubmit="this.querySelector('button').disabled=true">@csrf<button class="btn btn-primary">Iniciar cacería</button></form>@endif
-@if($navigationCharacter && $zone->status === 'active' && $zone->allows_hunting)<form method="POST" action="{{ route('characters.hunting-sessions.store',[$navigationCharacter,$zone]) }}" class="mb-4" onsubmit="this.querySelector('button').disabled=true">@csrf<button class="btn btn-success">Iniciar cacería conectada</button></form>@endif
+@if($navigationCharacter && $zone->status === 'active' && $zone->allows_hunting)
+<div class="row g-3 mb-4">
+ <div class="col-md-6"><div class="card h-100"><div class="card-body"><h2 class="h5">Cacería automática</h2><p class="text-secondary">El servidor ejecutará y resolverá los encuentros automáticamente.</p><form method="POST" action="{{ route('characters.hunting-sessions.store',[$navigationCharacter,$zone]) }}" onsubmit="this.querySelector('button').disabled=true">@csrf<button class="btn btn-success">Cacería automática</button></form></div></div></div>
+ <div class="col-md-6"><div class="card h-100"><div class="card-body"><h2 class="h5">Combate manual</h2><p class="text-secondary">Elige objetivos y ejecuta las acciones de tu personaje.</p><form method="POST" action="{{ route('characters.manual-combats.zones.store',[$navigationCharacter,$zone]) }}" onsubmit="this.querySelector('button').disabled=true">@csrf<button class="btn btn-primary">Combate manual</button></form></div></div></div>
+</div>
+@endif
 <div class="row g-3">
  <div class="col-lg-6"><div class="card"><div class="card-header">Conexiones disponibles</div><ul class="list-group list-group-flush">
  @foreach($zone->outgoingConnections as $connection)@if($connection->toZone)<li class="list-group-item"><a href="{{ route('zones.show',$connection->toZone) }}">{{ $connection->toZone->name }}</a></li>@endif @endforeach

@@ -69,8 +69,16 @@ const initializeWorldMapPlayer = player => {
       const loot = (monster.loot || []).map(item => item.item_name + ' (' + (item.chance_basis_points / 100) + ' %)').join(', ');
       body.appendChild(text('p', loot ? 'Loot: ' + loot : 'Sin loot visible.', 'small'));
     });
-    if (data.hunt_available) body.appendChild(postButton(data.hunt_url, 'Iniciar cacería', 'btn btn-primary'));
-    if (data.hunting_session_available) body.appendChild(postButton(data.hunting_session_url, 'Cacería conectada', 'btn btn-success'));
+    if (data.automatic_hunting_available) {
+      body.appendChild(text('h3', 'Cacería automática', 'h6 mt-3 mb-1'));
+      body.appendChild(text('p', 'El servidor ejecutará y resolverá los encuentros automáticamente.', 'small text-secondary mb-1'));
+      body.appendChild(postButton(data.automatic_hunting_url, 'Cacería automática', 'btn btn-success'));
+    }
+    if (data.manual_combat_available) {
+      body.appendChild(text('h3', 'Combate manual', 'h6 mt-3 mb-1'));
+      body.appendChild(text('p', 'Elige objetivos y ejecuta las acciones de tu personaje.', 'small text-secondary mb-1'));
+      body.appendChild(postButton(data.manual_combat_url, 'Combate manual', 'btn btn-primary'));
+    }
   };
   const showPanel = data => {
     title.textContent = data.label || 'Destino';

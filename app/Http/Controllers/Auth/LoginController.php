@@ -5,10 +5,11 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Support\Facades\Auth;
+use App\Domain\Characters\Accounts\CharacterAccountEntry;
 
 class LoginController extends Controller
 {
-    public function __invoke(LoginRequest $request)
+    public function __invoke(LoginRequest $request, CharacterAccountEntry $entry)
     {
         $credentials = $request->only('email', 'password');
 
@@ -20,6 +21,6 @@ class LoginController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard'));
+        return redirect()->route($entry->route($request->user()));
     }
 }

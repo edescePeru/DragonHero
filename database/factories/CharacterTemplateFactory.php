@@ -1,0 +1,3 @@
+<?php
+namespace Database\Factories;use App\Models\CharacterClass;use App\Models\CharacterTemplate;use Illuminate\Database\Eloquent\Factories\Factory;
+class CharacterTemplateFactory extends Factory{protected $model=CharacterTemplate::class;public function definition(){return['code'=>'template_'.$this->faker->unique()->numerify('####'),'name'=>$this->faker->name,'description'=>null,'character_class_id'=>CharacterClass::factory(),'presentation_gender'=>'neutral','body_type'=>'human_neutral_01','status'=>'inactive','sort_order'=>0,'base_max_health'=>100,'base_attack'=>10,'base_defense'=>5,'base_accuracy'=>80,'base_evasion'=>5,'base_critical_rate'=>'5.00'];}}

@@ -1,3 +1,83 @@
 <?php
-namespace App\Domain\WorldMaps;use App\Models\Character;use App\Models\WorldMapArea;use Carbon\CarbonImmutable;use Illuminate\Support\Facades\Route;use InvalidArgumentException;
-final class WorldMapAreaActionResolver{public function resolve(WorldMapArea $area,Character $character,$defaultWorldMaps,$defaultRegionMaps){$now=CarbonImmutable::now();$available=(!$area->available_from||$now->gte($area->available_from))&&(!$area->available_until||$now->lte($area->available_until));$message=$available?null:($area->available_from&&$now->lt($area->available_from)?'Disponible a partir de '.$area->available_from->format('Y-m-d H:i'):'Esta área ya no está disponible.');$url=null;$panel=null;$enabled=$available;if($area->action_type===WorldMapActionType::MAP){$target=$area->targetWorldMap;$enabled=$enabled&&$target&&$target->status===WorldMapStatus::ACTIVE;$url=$enabled?route('world-maps.show',$target):null;}elseif($area->action_type===WorldMapActionType::WORLD){$target=$defaultWorldMaps->get((int)$area->target_world_id);$enabled=$enabled&&(bool)$target;$url=$enabled?route('world-maps.show',$target):null;}elseif($area->action_type===WorldMapActionType::REGION){$target=$defaultRegionMaps->get((int)$area->target_region_id);$enabled=$enabled&&(bool)$target;$url=$enabled?route('world-maps.show',$target):null;}elseif($area->action_type===WorldMapActionType::INTERNAL_ROUTE){$url=$available?$this->internalUrl($area,$character):null;}elseif($area->action_type===WorldMapActionType::ZONE){$panel=$this->zonePanel($area,$character);$enabled=$enabled&&$panel!==null;}elseif($area->action_type===WorldMapActionType::INFO){$panel=['description'=>(string)$area->description];}else{$enabled=false;$message='Acción reservada no disponible.';}return['action_type'=>$area->action_type,'label'=>$area->name,'description'=>(string)$area->description,'enabled'=>$enabled,'disabled_reason'=>$enabled?null:($message?:'Destino no disponible.'),'navigation_url'=>$url,'panel_data'=>$panel,'available_now'=>$available,'availability_message'=>$message];}private function internalUrl($area,$character){$key=$area->internal_route_name;$definition=config('world_maps.internal_routes.'.$key);if(!$definition||!Route::has($definition['route_name']))throw new InvalidArgumentException('Invalid allowlisted route.');$parameters=$area->internal_route_parameters?:[];foreach(isset($definition['authoritative_parameters'])?$definition['authoritative_parameters']:[] as $parameter)if($parameter==='character')$parameters[$parameter]=$character;return route($definition['route_name'],$parameters);}private function zonePanel($area,$character){$zone=$area->zone;if(!$zone)return null;$monsters=$zone->monsters->map(function($monster){return['name'=>$monster->name,'level'=>(int)$monster->level,'loot'=>$monster->lootEntries->where('status','active')->map(function($entry){return['item_name'=>$entry->item->name,'chance_basis_points'=>(int)$entry->drop_chance_basis_points,'minimum_quantity'=>(int)$entry->minimum_quantity,'maximum_quantity'=>(int)$entry->maximum_quantity];})->values()->all()];})->values()->all();$hunting=$zone->status==='active'&&(bool)$zone->allows_hunting;return['name'=>$zone->name,'description'=>(string)$zone->description,'recommended_level_min'=>(int)$zone->recommended_level_min,'recommended_level_max'=>$zone->recommended_level_max===null?null:(int)$zone->recommended_level_max,'monsters'=>$monsters,'hunt_available'=>$hunting,'hunting_session_available'=>$hunting,'hunt_url'=>$hunting?route('characters.hunts.store',[$character,$zone]):null,'hunting_session_url'=>$hunting?route('characters.hunting-sessions.store',[$character,$zone]):null];}}
+
+namespace App\Domain\WorldMaps;
+
+use App\Models\Character;
+use App\Models\WorldMapArea;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Route;
+use InvalidArgumentException;
+
+final class WorldMapAreaActionResolver
+{
+    public function resolve(WorldMapArea $area, Character $character, $defaultWorldMaps, $defaultRegionMaps)
+    {
+        $now = CarbonImmutable::now();
+        $available = (!$area->available_from || $now->gte($area->available_from)) && (!$area->available_until || $now->lte($area->available_until));
+        $message = $available ? null : ($area->available_from && $now->lt($area->available_from) ? 'Disponible a partir de '.$area->available_from->format('Y-m-d H:i') : 'Esta área ya no está disponible.');
+        $url = null;
+        $panel = null;
+        $enabled = $available;
+
+        if ($area->action_type === WorldMapActionType::MAP) {
+            $target = $area->targetWorldMap;
+            $enabled = $enabled && $target && $target->status === WorldMapStatus::ACTIVE;
+            $url = $enabled ? route('world-maps.show', $target) : null;
+        } elseif ($area->action_type === WorldMapActionType::WORLD) {
+            $target = $defaultWorldMaps->get((int) $area->target_world_id);
+            $enabled = $enabled && (bool) $target;
+            $url = $enabled ? route('world-maps.show', $target) : null;
+        } elseif ($area->action_type === WorldMapActionType::REGION) {
+            $target = $defaultRegionMaps->get((int) $area->target_region_id);
+            $enabled = $enabled && (bool) $target;
+            $url = $enabled ? route('world-maps.show', $target) : null;
+        } elseif ($area->action_type === WorldMapActionType::INTERNAL_ROUTE) {
+            $url = $available ? $this->internalUrl($area, $character) : null;
+        } elseif ($area->action_type === WorldMapActionType::ZONE) {
+            $panel = $this->zonePanel($area, $character);
+            $enabled = $enabled && $panel !== null;
+        } elseif ($area->action_type === WorldMapActionType::INFO) {
+            $panel = ['description' => (string) $area->description];
+        } else {
+            $enabled = false;
+            $message = 'Acción reservada no disponible.';
+        }
+
+        return ['action_type' => $area->action_type, 'label' => $area->name, 'description' => (string) $area->description, 'enabled' => $enabled, 'disabled_reason' => $enabled ? null : ($message ?: 'Destino no disponible.'), 'navigation_url' => $url, 'panel_data' => $panel, 'available_now' => $available, 'availability_message' => $message];
+    }
+
+    private function internalUrl($area, $character)
+    {
+        $definition = config('world_maps.internal_routes.'.$area->internal_route_name);
+        if (!$definition || !Route::has($definition['route_name'])) throw new InvalidArgumentException('Invalid allowlisted route.');
+        $parameters = $area->internal_route_parameters ?: [];
+        foreach (isset($definition['authoritative_parameters']) ? $definition['authoritative_parameters'] : [] as $parameter) {
+            if ($parameter === 'character') $parameters[$parameter] = $character;
+        }
+        return route($definition['route_name'], $parameters);
+    }
+
+    private function zonePanel($area, $character)
+    {
+        $zone = $area->zone;
+        if (!$zone) return null;
+        $monsters = $zone->monsters->map(function ($monster) {
+            return ['name' => $monster->name, 'level' => (int) $monster->level, 'loot' => $monster->lootEntries->where('status', 'active')->map(function ($entry) {
+                return ['item_name' => $entry->item->name, 'chance_basis_points' => (int) $entry->drop_chance_basis_points, 'minimum_quantity' => (int) $entry->minimum_quantity, 'maximum_quantity' => (int) $entry->maximum_quantity];
+            })->values()->all()];
+        })->values()->all();
+        $available = $zone->status === 'active' && (bool) $zone->allows_hunting;
+
+        return [
+            'name' => $zone->name,
+            'description' => (string) $zone->description,
+            'recommended_level_min' => (int) $zone->recommended_level_min,
+            'recommended_level_max' => $zone->recommended_level_max === null ? null : (int) $zone->recommended_level_max,
+            'monsters' => $monsters,
+            'automatic_hunting_available' => $available,
+            'automatic_hunting_url' => $available ? route('characters.hunting-sessions.store', [$character, $zone]) : null,
+            'manual_combat_available' => $available,
+            'manual_combat_url' => $available ? route('characters.manual-combats.zones.store', [$character, $zone]) : null,
+        ];
+    }
+}

@@ -4,7 +4,9 @@ Cada `Hunt` representa un encuentro completo de un personaje contra uno o varios
 
 ## Configuración y selección
 
-`zone_encounter_sizes` define cantidades posibles por zona mediante pesos relativos. Los pesos no son porcentajes ni necesitan sumar 100. Toda zona cazable requiere configuración explícita y el selector no aplica fallback silencioso. El límite operativo actual es `CombatLimits::MAX_PARTICIPANTS_PER_SIDE` (10), no un máximo permanente de diseño.
+`zone_encounter_sizes` es la fuente de verdad por zona para la cantidad de enemigos. `enemy_count` indica cuántos aparecen y `weight` su peso relativo. El dominio admite pesos que no sumen 100; únicamente el panel administrativo exige 100 para presentar probabilidades enteras claras y administra las cantidades 1, 2 y 3. Ejemplos: `100/0/0`, `0/100/0`, `60/30/10` y `0/50/50`.
+
+El máximo administrable actual es 3, mientras que el límite técnico permanece en `CombatLimits::MAX_PARTICIPANTS_PER_SIDE` (10). La selección de monstruos usa reemplazo, por lo que una sola especie elegible puede ocupar varias posiciones con identifiers independientes. El formulario usa `100/0/0` como fallback visual para zonas heredadas sin filas, pero Hunting no aplica fallback silencioso: toda zona cazable necesita al menos una configuración activa válida. Los pesos de `zone_monsters` deciden cuáles aparecen y son independientes de los pesos de cantidad.
 
 El selector de cantidad consume una tirada RNG incluso cuando existe una única configuración, manteniendo una secuencia determinista documentada. Después, `WeightedMonsterSelector` carga una vez los spawns y Monsters activos elegibles y selecciona N veces con reemplazo sobre la misma colección. El mismo Monster puede aparecer varias veces.
 
@@ -29,3 +31,9 @@ Cada Hunt conserva un snapshot JSON versionado con estadísticas base, bonus, va
 La simulación no modifica `current_health` persistido y no entrega experiencia, oro, loot ni objetos. No persiste acciones completas ni recursos multimedia.
 
 `Hunt` no es una futura `HuntingSession`: una sesión coordinará múltiples encuentros, tiempos, derrotas consecutivas y ejecución conectada u offline en otro incremento.
+
+## Separación de modos en la interfaz
+
+La pantalla de `HuntingSession` está reservada a la cacería automática: inicia el tick, presenta encuentros, historial, recompensas y controles de detención, y no contiene controles ni endpoints de combate manual. La elección entre cacería automática y combate manual se realiza únicamente desde la Zone o el mapa.
+
+El polling automático detiene los reintentos ante respuestas HTTP. Un 401 sigue el flujo de autenticación; 403/404, 409, 422 y errores del servidor detienen el polling y presentan un reintento manual. Los fallos de red usan solo dos reintentos con backoff de 2 y 5 segundos antes de requerir intervención del jugador.

@@ -14,3 +14,6 @@ Zones mantienen la jerarquía `World → Region → Zone`; se persiste `region_i
 `/admin/content/refinement` administra transiciones y materiales. En v1 solo acepta 10000 puntos base y `keep_level`; las reglas se desactivan en vez de eliminarse para preservar la historia.
 
 La misma pantalla administra, en una sección separada, modificadores estadísticos `+1..+15`. Permite crear, editar, activar y desactivar; no permite borrado físico. Activar revalida la fila completa y desactivar solo cambia su estado. La UI muestra puntos base, porcentaje equivalente y advertencias para niveles ausentes o inactivos. Los valores sembrados son provisionales.
+# Menú de inicio
+
+Las cards configurables se administran en `admin/content/game-home-cards` bajo el mismo middleware `content.admin`. El mantenedor controla destino, orden, visibilidad, nueva pestaña y banner. Véase `docs/GAME_HOME_CARDS.md`.

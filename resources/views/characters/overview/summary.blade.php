@@ -1,4 +1,5 @@
 <section class="card h-100" aria-labelledby="overview-character-heading"><div class="card-body d-flex flex-column">
+  <div class="text-center mb-3"><x-character.appearance :appearance="$overview['appearance']" :name="$overview['summary']['name']" /></div>
   <div class="d-flex align-items-center gap-3 mb-3">
     @if($overview['summary']['portrait_url'])<img class="overview-portrait" src="{{ $overview['summary']['portrait_url'] }}" alt="Retrato de {{ $overview['summary']['name'] }}">@else<div class="overview-portrait overview-placeholder" role="img" aria-label="Sin retrato">{{ $overview['summary']['portrait_initial'] }}</div>@endif
     <div><h2 id="overview-character-heading" class="h4 mb-1">{{ $overview['summary']['name'] }}</h2><p class="text-secondary mb-0">{{ $overview['summary']['class_name'] }} · Nivel {{ $overview['summary']['level'] }}</p></div>

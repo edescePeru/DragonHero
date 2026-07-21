@@ -1,28 +1,4 @@
 <?php
-
 namespace App\Http\Middleware;
-
-use App\Domain\Admin\Content\ContentAdministratorAuthorization;
-use Closure;
-use Illuminate\Support\Facades\View;
-
-class ShareGameNavigationContext
-{
-    private $contentAuthorization;
-
-    public function __construct(ContentAdministratorAuthorization $contentAuthorization)
-    {
-        $this->contentAuthorization = $contentAuthorization;
-    }
-
-    public function handle($request, Closure $next)
-    {
-        $user = $request->user();
-        $character = $user->characters()->orderBy('id')->first();
-
-        View::share('navigationCharacter', $character);
-        View::share('canAdministerContent', $this->contentAuthorization->allows($user));
-
-        return $next($request);
-    }
-}
+use App\Domain\Admin\Content\ContentAdministratorAuthorization;use App\Domain\Characters\Accounts\ActiveCharacterContext;use Closure;use Illuminate\Support\Facades\View;
+final class ShareGameNavigationContext{private $contentAuthorization;private $context;public function __construct(ContentAdministratorAuthorization $contentAuthorization,ActiveCharacterContext $context){$this->contentAuthorization=$contentAuthorization;$this->context=$context;}public function handle($request,Closure $next){$user=$request->user();View::share('navigationCharacter',$user?$this->context->current($user):null);View::share('canAdministerContent',$this->contentAuthorization->allows($user));return$next($request);}}

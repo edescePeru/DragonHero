@@ -23,7 +23,7 @@ class GameNavigationTest extends TestCase
     private function player()
     {
         $user = User::factory()->create();
-        $character = Character::factory()->for($user)->create();
+        $character = Character::factory()->selectedFor($user)->create();
 
         return [$user, $character];
     }
@@ -47,7 +47,8 @@ class GameNavigationTest extends TestCase
         $this->actingAs($user);
         $this->assertGlobal($this->get(route('dashboard')))->assertOk();
         $this->assertGlobal($this->get(route('characters.show', $character)))
-            ->assertSee('nav-link active" href="'.route('characters.show', $character), false)
+            ->assertSee('nav-link active" href="'.route('characters.overview', $character), false)
+            ->assertDontSee('nav-link active" href="'.route('characters.show', $character).'"', false)
             ->assertSee('Resumen y estadísticas');
         $this->assertGlobal($this->get(route('characters.inventory.index', $character)))
             ->assertSee('nav-link active" href="'.route('characters.inventory.index', $character), false)
@@ -73,7 +74,7 @@ class GameNavigationTest extends TestCase
     public function test_links_never_use_another_character()
     {
         list($user, $character) = $this->player();
-        $other = Character::factory()->for(User::factory())->create();
+        $other = Character::factory()->selected()->for(User::factory())->create();
         $this->actingAs($user)->get(route('characters.show', $character))
             ->assertSee(route('characters.show', $character), false)
             ->assertDontSee(route('characters.show', $other), false);

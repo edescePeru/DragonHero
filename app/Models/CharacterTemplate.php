@@ -1,0 +1,3 @@
+<?php
+namespace App\Models;use App\Models\Concerns\HasMediaAssets;use Illuminate\Database\Eloquent\Factories\HasFactory;use Illuminate\Database\Eloquent\Model;
+class CharacterTemplate extends Model{use HasFactory,HasMediaAssets;protected $guarded=[];protected $casts=['character_class_id'=>'integer','sort_order'=>'integer','base_max_health'=>'integer','base_attack'=>'integer','base_defense'=>'integer','base_accuracy'=>'integer','base_evasion'=>'integer','base_critical_rate'=>'decimal:2'];public function characterClass(){return$this->belongsTo(CharacterClass::class);}public function characters(){return$this->hasMany(Character::class);}}

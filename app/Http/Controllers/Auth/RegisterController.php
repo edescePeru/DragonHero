@@ -7,10 +7,11 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Domain\Characters\Accounts\CharacterAccountEntry;
 
 class RegisterController extends Controller
 {
-    public function __invoke(RegisterRequest $request)
+    public function __invoke(RegisterRequest $request, CharacterAccountEntry $entry)
     {
         $data = $request->validated();
 
@@ -23,6 +24,6 @@ class RegisterController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('dashboard');
+        return redirect()->route($entry->route($user));
     }
 }

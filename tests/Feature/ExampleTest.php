@@ -19,7 +19,7 @@ class ExampleTest extends TestCase
     public function test_authenticated_user_can_access_dashboard()
     {
         $user = User::factory()->create();
-        Character::factory()->for($user)->create();
+        Character::factory()->selectedFor($user)->create();
 
         $response = $this->actingAs($user)->get('/');
 

@@ -6,7 +6,9 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ShowLoginController;
 use App\Http\Controllers\Auth\ShowRegistrationController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GameHomeController;
 use App\Http\Controllers\CharacterController;
+use App\Http\Controllers\CharacterSelectionController;
 use App\Http\Controllers\WorldCatalogController;
 use App\Http\Controllers\RegionCatalogController;
 use App\Http\Controllers\ZoneCatalogController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\CharacterHuntRewardClaimController;
 use App\Http\Controllers\CharacterEquipmentController;
 use App\Http\Controllers\CharacterItemRefinementController;
 use App\Http\Controllers\CharacterOverviewController;
+use App\Http\Controllers\ManualCombatController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Content\ItemController as AdminItemController;
 use App\Http\Controllers\Admin\Content\MonsterController as AdminMonsterController;
@@ -29,6 +32,11 @@ use App\Http\Controllers\Admin\Content\RefinementController as AdminRefinementCo
 use App\Http\Controllers\Admin\Content\RefinementStatModifierController as AdminRefinementStatModifierController;
 use App\Http\Controllers\Admin\Content\WorldMapController as AdminWorldMapController;
 use App\Http\Controllers\Admin\Content\WorldMapAreaController as AdminWorldMapAreaController;
+use App\Http\Controllers\Admin\Content\CharacterTemplateController as AdminCharacterTemplateController;
+use App\Http\Controllers\Admin\Content\GameHomeCardController as AdminGameHomeCardController;
+use App\Http\Controllers\Admin\Content\ItemVisualAssetController as AdminItemVisualAssetController;
+use App\Http\Controllers\Admin\Content\RegionController as AdminRegionController;
+use App\Http\Controllers\Admin\Content\WorldController as AdminWorldController;
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', ShowLoginController::class)->name('login');
@@ -40,6 +48,9 @@ Route::middleware('guest')->group(function () {
 Route::middleware(['auth', 'game.navigation'])->group(function () {
     Route::get('/characters/create', [CharacterController::class, 'create'])->name('characters.create');
     Route::post('/characters', [CharacterController::class, 'store'])->name('characters.store');
+    Route::get('/characters/select', [CharacterSelectionController::class, 'index'])->name('characters.select');
+    Route::post('/characters/{character}/select', [CharacterSelectionController::class, 'store'])->name('characters.select.store');
+    Route::middleware(['character.active.route','character.required'])->group(function () {
     Route::get('/characters/{character}/overview', CharacterOverviewController::class)->name('characters.overview');
     Route::get('/characters/{character}', [CharacterController::class, 'show'])->name('characters.show');
     Route::get('/characters/{character}/inventory', [CharacterInventoryController::class, 'index'])->name('characters.inventory.index');
@@ -51,12 +62,20 @@ Route::middleware(['auth', 'game.navigation'])->group(function () {
     Route::get('/characters/{character}/hunting-sessions/{huntingSession}', [CharacterHuntingSessionController::class, 'show'])->name('characters.hunting-sessions.show');
     Route::post('/characters/{character}/hunting-sessions/{huntingSession}/tick', [CharacterHuntingSessionController::class, 'tick'])->name('characters.hunting-sessions.tick');
     Route::post('/characters/{character}/hunting-sessions/{huntingSession}/stop', [CharacterHuntingSessionController::class, 'stop'])->name('characters.hunting-sessions.stop');
+    Route::post('/characters/{character}/hunting-sessions/{huntingSession}/manual-combat', [ManualCombatController::class, 'store'])->name('characters.manual-combats.store');
+    Route::post('/characters/{character}/zones/{zone}/manual-combat', [ManualCombatController::class, 'storeForZone'])->name('characters.manual-combats.zones.store');
+    Route::get('/characters/{character}/manual-combats/{combatSession}', [ManualCombatController::class, 'show'])->name('characters.manual-combats.show');
+    Route::get('/characters/{character}/manual-combats/{combatSession}/play', [ManualCombatController::class, 'play'])->name('characters.manual-combats.play');
+      Route::post('/characters/{character}/manual-combats/{combatSession}/actions', [ManualCombatController::class, 'action'])->name('characters.manual-combats.actions.store');
+      Route::post('/characters/{character}/manual-combats/{combatSession}/claim-rewards', [ManualCombatController::class, 'claimRewards'])->name('characters.manual-combats.rewards.claim');
+      Route::post('/characters/{character}/manual-combats/{combatSession}/abandon', [ManualCombatController::class, 'abandon'])->name('characters.manual-combats.abandon');
     Route::post('/characters/{character}/hunt-rewards/claim', CharacterHuntRewardClaimController::class)->name('characters.hunt-rewards.claim');
     Route::post('/characters/{character}/equipment/equip', [CharacterEquipmentController::class, 'equip'])->name('characters.equipment.equip');
     Route::post('/characters/{character}/equipment/unequip', [CharacterEquipmentController::class, 'unequip'])->name('characters.equipment.unequip');
     Route::post('/characters/{character}/item-instances/{itemInstance}/refine', CharacterItemRefinementController::class)->name('characters.item-instances.refine');
+    });
 
-    Route::get('/', [DashboardController::class, 'index'])
+    Route::get('/', GameHomeController::class)
         ->middleware('character.required')
         ->name('dashboard');
     Route::get('/inventory.html', [DashboardController::class, 'inventory']);
@@ -72,12 +91,32 @@ Route::middleware(['auth', 'game.navigation', 'character.required'])->group(func
     Route::get('/maps/regions/{region}',[WorldMapController::class,'region'])->name('world-maps.region');
     Route::get('/maps/{worldMap}',[WorldMapController::class,'show'])->name('world-maps.show');
     Route::get('/worlds', [WorldCatalogController::class, 'index'])->name('worlds.index');
+    Route::get('/worlds/{world}/regions/{region}', [WorldCatalogController::class, 'region'])->name('worlds.regions.show');
     Route::get('/worlds/{world}', [WorldCatalogController::class, 'show'])->name('worlds.show');
     Route::get('/regions/{region}', [RegionCatalogController::class, 'show'])->name('regions.show');
     Route::get('/zones/{zone}', [ZoneCatalogController::class, 'show'])->name('zones.show');
 });
 
 Route::prefix('admin/content')->name('admin.content.')->middleware(['auth','game.navigation','content.admin'])->group(function(){
+    Route::get('worlds/{world}/regions', [AdminRegionController::class, 'index'])->name('worlds.regions.index');
+    Route::get('worlds/{world}/regions/create', [AdminRegionController::class, 'create'])->name('worlds.regions.create');
+    Route::post('worlds/{world}/regions', [AdminRegionController::class, 'store'])->name('worlds.regions.store');
+    Route::patch('worlds/{world}/activate', [AdminWorldController::class, 'activate'])->name('worlds.activate');
+    Route::patch('worlds/{world}/deactivate', [AdminWorldController::class, 'deactivate'])->name('worlds.deactivate');
+    Route::delete('worlds/{world}/image', [AdminWorldController::class, 'destroyImage'])->name('worlds.image.destroy');
+    Route::resource('worlds', AdminWorldController::class)->only(['index', 'create', 'store', 'edit', 'update']);
+    Route::patch('regions/{region}/activate', [AdminRegionController::class, 'activate'])->name('regions.activate');
+    Route::patch('regions/{region}/deactivate', [AdminRegionController::class, 'deactivate'])->name('regions.deactivate');
+    Route::resource('regions', AdminRegionController::class)->only(['index', 'create', 'store', 'edit', 'update']);
+    Route::patch('game-home-cards/{gameHomeCard}/activate',[AdminGameHomeCardController::class,'activate'])->name('game-home-cards.activate');
+    Route::patch('game-home-cards/{gameHomeCard}/deactivate',[AdminGameHomeCardController::class,'deactivate'])->name('game-home-cards.deactivate');
+    Route::delete('game-home-cards/{gameHomeCard}/banner',[AdminGameHomeCardController::class,'destroyBanner'])->name('game-home-cards.banner.destroy');
+    Route::resource('game-home-cards',AdminGameHomeCardController::class)->except('show')->parameters(['game-home-cards'=>'gameHomeCard']);
+    Route::patch('character-templates/{character_template}/activate',[AdminCharacterTemplateController::class,'activate'])->name('character-templates.activate');
+    Route::patch('character-templates/{character_template}/deactivate',[AdminCharacterTemplateController::class,'deactivate'])->name('character-templates.deactivate');
+    Route::patch('character-templates/{character_template}/hide',[AdminCharacterTemplateController::class,'hide'])->name('character-templates.hide');
+    Route::delete('character-templates/{character_template}/image',[AdminCharacterTemplateController::class,'destroyImage'])->name('character-templates.image.destroy');
+    Route::resource('character-templates',AdminCharacterTemplateController::class)->parameters(['character-templates'=>'character_template']);
     Route::get('world-maps/{worldMap}/editor',[AdminWorldMapController::class,'editor'])->name('world-maps.editor');
     Route::resource('world-maps',AdminWorldMapController::class)->parameters(['world-maps'=>'worldMap']);
     Route::post('world-maps/{worldMap}/areas',[AdminWorldMapAreaController::class,'store'])->name('world-maps.areas.store');
@@ -85,6 +124,8 @@ Route::prefix('admin/content')->name('admin.content.')->middleware(['auth','game
     Route::patch('world-maps/{worldMap}/areas/{worldMapArea}/activate',[AdminWorldMapAreaController::class,'activate'])->name('world-maps.areas.activate');
     Route::patch('world-maps/{worldMap}/areas/{worldMapArea}/deactivate',[AdminWorldMapAreaController::class,'deactivate'])->name('world-maps.areas.deactivate');
     Route::delete('items/{item}/image',[AdminItemController::class,'destroyImage'])->name('items.image.destroy');
+    Route::post('items/{item}/visual-assets',[AdminItemVisualAssetController::class,'store'])->name('items.visual-assets.store');
+    Route::delete('items/{item}/visual-assets/{itemVisualAsset}',[AdminItemVisualAssetController::class,'destroy'])->name('items.visual-assets.destroy');
     Route::delete('monsters/{monster}/image',[AdminMonsterController::class,'destroyImage'])->name('monsters.image.destroy');
     Route::resource('items',AdminItemController::class)->except('show');
     Route::resource('monsters',AdminMonsterController::class);

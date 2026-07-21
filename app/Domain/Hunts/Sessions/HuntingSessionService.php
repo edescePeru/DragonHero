@@ -16,8 +16,10 @@ use App\Domain\Hunts\Sessions\Exceptions\ActiveHuntingSessionExistsException;
 use App\Domain\Hunts\Sessions\Exceptions\HuntingSessionOwnershipException;
 use App\Domain\Inventory\Capacity\Exceptions\InsufficientPendingRewardCapacityException;
 use App\Domain\Inventory\Capacity\PendingRewardCapacityService;
+use App\Domain\Media\MediaAssetType;
 use App\Domain\WorldCatalog\CatalogStatus;
 use App\Models\Character;
+use App\Models\CombatSession;
 use App\Models\Hunt;
 use App\Models\HuntCombatEvent;
 use App\Models\HuntingSession;
@@ -36,13 +38,15 @@ final class HuntingSessionService
     private $resultCapacity;
     private $playback;
     private $initialHistory;
+    private $presentation;
 
-    public function __construct(HuntService $hunts, HuntRewardService $rewards, PendingRewardCapacityService $capacity, HuntingPlaybackCalculator $playback)
+    public function __construct(HuntService $hunts, HuntRewardService $rewards, PendingRewardCapacityService $capacity, HuntingPlaybackCalculator $playback, HuntingSessionPresentationService $presentation)
     {
         $this->hunts = $hunts;
         $this->rewards = $rewards;
         $this->capacity = $capacity;
         $this->playback = $playback;
+        $this->presentation = $presentation;
     }
 
     public function start(Character $character, Zone $zone): HuntingSessionResult
@@ -104,6 +108,9 @@ final class HuntingSessionService
             }
             $lockedSession->last_heartbeat_at = $now;
             $lockedSession->save();
+            if (CombatSession::where('active_slot', $lockedCharacter->id)->exists()) {
+                return $this->tickWithoutHunt($lockedCharacter, $lockedSession, $now);
+            }
             if ($lockedSession->next_encounter_at && $now->lt(CarbonImmutable::instance($lockedSession->next_encounter_at))) {
                 return $this->tickWithoutHunt($lockedCharacter, $lockedSession, $now);
             }
@@ -205,7 +212,7 @@ final class HuntingSessionService
 
     private function latestHunt(HuntingSession $session)
     {
-        $hunt = $session->hunts()->with(['enemies','combatEvents','reward.items'])->orderByDesc('id')->first();
+        $hunt = $session->hunts()->with(['enemies.monster.mediaAssets','combatEvents','reward.items'])->orderByDesc('id')->first();
         if (!$hunt) return null;
         return $this->serializeHunt($hunt);
     }
@@ -214,7 +221,7 @@ final class HuntingSessionService
     {
         $query = $session->hunts()->orderByDesc('id');
         $totalHunts = (clone $query)->count();
-        $hunts = $query->with(['enemies','reward.items'])->limit(HuntingSessionLogLimits::INITIAL_SESSION_LOG_HUNTS)->get();
+        $hunts = $query->with(['enemies.monster.mediaAssets','reward.items'])->limit(HuntingSessionLogLimits::INITIAL_SESSION_LOG_HUNTS)->get();
         $huntIds = $hunts->pluck('id');
         $totalEvents = $huntIds->isEmpty() ? 0 : HuntCombatEvent::whereIn('hunt_id', $huntIds)->count();
         $events = $huntIds->isEmpty() ? collect() : HuntCombatEvent::query()->select('hunt_combat_events.*')->join('hunts','hunts.id','=','hunt_combat_events.hunt_id')->whereIn('hunt_combat_events.hunt_id',$huntIds)->orderByDesc('hunts.id')->orderByDesc('hunt_combat_events.sequence')->limit(HuntingSessionLogLimits::INITIAL_SESSION_LOG_EVENTS)->get()->groupBy('hunt_id');
@@ -228,7 +235,8 @@ final class HuntingSessionService
     private function serializeHunt(Hunt $hunt)
     {
         $participants=[['identifier'=>'character:'.$hunt->character_id,'side'=>'players','display_name'=>$hunt->character_name,'initial_health'=>$hunt->character_health_before,'final_health'=>$hunt->character_health_after,'status'=>$hunt->character_health_after>0?'alive':'defeated']];
-        foreach($hunt->enemies as $enemy)$participants[]=['identifier'=>$enemy->instance_identifier,'side'=>'enemies','display_name'=>$enemy->monster_name_snapshot.($hunt->enemy_count>1?' '.$enemy->position:''),'initial_health'=>$enemy->initial_health,'final_health'=>$enemy->final_health,'status'=>$enemy->status];
+        $hunt->loadMissing('enemies.monster.mediaAssets');
+        foreach($hunt->enemies as $enemy){$visual=$this->monsterVisual($enemy->monster);$participants[]=['identifier'=>$enemy->instance_identifier,'side'=>'enemies','display_name'=>$enemy->monster_name_snapshot.($hunt->enemy_count>1?' '.$enemy->position:''),'initial_health'=>$enemy->initial_health,'final_health'=>$enemy->final_health,'status'=>$enemy->status,'monster_id'=>(int)$enemy->monster_id,'image_url'=>$visual['url'],'image_type'=>$visual['type']];}
         $events=$hunt->combatEvents->map(function($event){return $event->only(['sequence','round','actor_identifier','target_identifier','event_type','did_hit','hit_probability','hit_roll','critical_probability','critical_roll','is_critical','damage','healing','target_health_before','target_health_after','playback_offset_ms','playback_duration_ms']);})->all();
         $historicalReward=null;if($hunt->reward){$items=$hunt->reward->items->map(function($item){return['item_id'=>$item->item_id,'item_name'=>$item->item_name_snapshot,'quantity'=>$item->quantity];})->all();$historicalReward=['hunt_id'=>$hunt->id,'item_lines_count'=>count($items),'items'=>$items];}
         return ['hunt_id'=>$hunt->id,'status'=>$hunt->status,'rounds_count'=>$hunt->rounds_count,'enemy_count'=>$hunt->enemy_count,'character_health_before'=>$hunt->character_health_before,'character_health_after'=>$hunt->character_health_after,'resolved_at'=>$hunt->resolved_at->toIso8601String(),'combat_events_duration_ms'=>$hunt->combat_events_duration_ms,'result_reveal_duration_ms'=>$hunt->result_reveal_duration_ms,'loot_reveal_duration_ms'=>$hunt->loot_reveal_duration_ms,'playback_duration_ms'=>$hunt->playback_duration_ms,'playback_speed_multiplier'=>$hunt->playback_speed_multiplier,'participants'=>$participants,'events'=>$events,'historical_reward'=>$historicalReward,'enemies'=>$hunt->enemies->map(function($enemy){return ['position'=>$enemy->position,'identifier'=>$enemy->instance_identifier,'monster_name'=>$enemy->monster_name_snapshot,'initial_health'=>$enemy->initial_health,'final_health'=>$enemy->final_health,'status'=>$enemy->status];})->all()];
@@ -244,8 +252,11 @@ final class HuntingSessionService
         if ($generatedReward !== null && (int)$generatedReward['hunt_id'] !== (int)$processedHunt['hunt_id']) throw new \RuntimeException('Generated reward does not match processed Hunt.');
         $capacity = $this->resultCapacity ? $this->resultCapacity->toArray() : null;
         $this->resultCapacity = null;
-        $data=['session_id'=>$session->id,'status'=>$session->status,'stop_reason'=>$session->stop_reason,'server_time'=>$now->toIso8601String(),'next_encounter_at'=>$next?$next->toIso8601String():null,'seconds_until_next_encounter'=>$next?max(0,$now->diffInSeconds($next,false)):null,'consecutive_defeats'=>$session->consecutive_defeats,'hunts_count'=>$session->hunts_count,'victories_count'=>$session->victories_count,'defeats_count'=>$session->defeats_count,'draws_count'=>$session->draws_count,'latest_hunt'=>$latestHunt,'processed_hunt'=>$processedHunt,'generated_reward'=>$generatedReward,'session_pending_rewards_summary'=>$this->rewards->summary($session->id),'character_pending_rewards_summary'=>$this->rewards->summaryPendingForCharacter((object)['id'=>$session->character_id]),'inventory_capacity'=>$capacity];
+        $global=$this->presentation->decoratePendingSummary($this->rewards->summaryPendingForCharacter((object)['id'=>$session->character_id]));
+        $data=['session_id'=>$session->id,'status'=>$session->status,'stop_reason'=>$session->stop_reason,'server_time'=>$now->toIso8601String(),'next_encounter_at'=>$next?$next->toIso8601String():null,'seconds_until_next_encounter'=>$next?max(0,$now->diffInSeconds($next,false)):null,'consecutive_defeats'=>$session->consecutive_defeats,'hunts_count'=>$session->hunts_count,'victories_count'=>$session->victories_count,'defeats_count'=>$session->defeats_count,'draws_count'=>$session->draws_count,'latest_hunt'=>$latestHunt,'processed_hunt'=>$processedHunt,'generated_reward'=>$generatedReward,'session_pending_rewards_summary'=>$this->rewards->summary($session->id),'character_pending_rewards_summary'=>$global,'inventory_capacity'=>$capacity];
         if($this->initialHistory!==null){$data['session_hunt_history']=$this->initialHistory;$this->initialHistory=null;}
         return new HuntingSessionResult($data);
     }
+
+    private function monsterVisual($monster){if(!$monster||!$monster->relationLoaded('mediaAssets'))return['url'=>null,'type'=>null];foreach([MediaAssetType::SPRITE_IDLE,MediaAssetType::PORTRAIT,MediaAssetType::IMAGE]as$type){$asset=$monster->mediaAssets->first(function($candidate)use($type){return$candidate->asset_type===$type&&(bool)$candidate->is_primary;});if($asset)return['url'=>$asset->url(),'type'=>$type];}return['url'=>null,'type'=>null];}
 }

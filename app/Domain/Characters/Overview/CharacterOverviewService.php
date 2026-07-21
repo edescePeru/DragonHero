@@ -3,6 +3,7 @@
 namespace App\Domain\Characters\Overview;
 
 use App\Domain\Characters\CharacterStatsCalculator;
+use App\Domain\Characters\Appearance\CharacterAppearanceService;
 use App\Domain\Characters\Progression\CharacterProgressionService;
 use App\Domain\Equipment\CharacterEquipmentSummaryService;
 use App\Domain\Equipment\CharacterEquipmentSlot;
@@ -10,6 +11,7 @@ use App\Domain\Inventory\CharacterInventorySummaryService;
 use App\Domain\Media\MediaAssetType;
 use App\Domain\Media\CatalogImages\CatalogImageService;
 use App\Domain\Media\CatalogImages\CatalogImageType;
+use App\Domain\Media\CharacterVisuals\CharacterVisualAssetService;
 use App\Domain\Wallet\WalletService;
 use App\Models\Character;
 use App\Models\Item;
@@ -22,6 +24,8 @@ final class CharacterOverviewService
     private $inventory;
     private $wallet;
     private $catalogImages;
+    private $characterVisuals;
+    private $appearance;
 
     public function __construct(
         CharacterStatsCalculator $stats,
@@ -29,7 +33,9 @@ final class CharacterOverviewService
         CharacterEquipmentSummaryService $equipment,
         CharacterInventorySummaryService $inventory,
         WalletService $wallet,
-        CatalogImageService $catalogImages
+        CatalogImageService $catalogImages,
+        CharacterVisualAssetService $characterVisuals,
+        CharacterAppearanceService $appearance
     ) {
         $this->stats = $stats;
         $this->progression = $progression;
@@ -37,12 +43,18 @@ final class CharacterOverviewService
         $this->inventory = $inventory;
         $this->wallet = $wallet;
         $this->catalogImages = $catalogImages;
+        $this->characterVisuals = $characterVisuals;
+        $this->appearance = $appearance;
     }
 
     public function snapshot(Character $character): array
     {
         $character->loadMissing([
             'characterClass',
+            'characterTemplate.mediaAssets' => function ($query) {
+                $query->where('asset_type', MediaAssetType::BASE_VISUAL)
+                    ->where('is_primary', true)->orderBy('id');
+            },
             'mediaAssets' => function ($query) {
                 $query->where('asset_type', MediaAssetType::PORTRAIT)
                     ->orderByDesc('is_primary')->orderBy('sort_order')->orderBy('id');
@@ -69,7 +81,9 @@ final class CharacterOverviewService
 
         $inventoryRows = [];
         foreach ($inventory['stackable_items'] as $entry) {
-            $inventoryRows[] = $this->stackableRow($entry, $items->get($entry['item_id']));
+            foreach ($entry['stack_quantities'] as $stackQuantity) {
+                $inventoryRows[] = $this->stackableRow($entry, $items->get($entry['item_id']), $stackQuantity);
+            }
         }
         foreach ($inventory['item_instances'] as $entry) {
             $inventoryRows[] = $this->instanceRow($entry, $items->get($entry['item_id']), $character);
@@ -77,8 +91,10 @@ final class CharacterOverviewService
 
         $capacity = $inventory['inventory_status'];
         $portrait = $character->mediaAssets->first();
+        $baseVisual = $this->characterVisuals->presentation($character->characterTemplate);
 
         return [
+            'appearance' => $this->appearance->presentation($character),
             'summary' => [
                 'name' => $character->name,
                 'class_name' => $character->characterClass ? $character->characterClass->name : 'Sin clase',
@@ -87,6 +103,8 @@ final class CharacterOverviewService
                 'gold' => $this->wallet->balance($character)->balance(),
                 'portrait_url' => $portrait ? $portrait->url() : null,
                 'portrait_initial' => mb_strtoupper(mb_substr($character->name, 0, 1)),
+                'base_visual_url' => $baseVisual->url256(),
+                'base_visual_is_fallback' => !$baseVisual->exists(),
                 'progress' => [
                     'percentage' => $progress->percentage(),
                     'maximum_level' => $progress->isMaximumLevel(),
@@ -140,14 +158,18 @@ final class CharacterOverviewService
         ]);
     }
 
-    private function stackableRow(array $entry, $item): array
+    private function stackableRow(array $entry, $item, $stackQuantity): array
     {
         return [
             'kind' => 'stackable',
+            'item_id' => $entry['item_id'],
+            'item_code' => $entry['item_code'],
             'name' => $entry['item_name'],
             'icon_url' => $this->iconUrl($item, 64),
             'detail_icon_url' => $this->iconUrl($item, 128),
-            'quantity' => $entry['quantity'],
+            'quantity' => (int) $stackQuantity,
+            'total_quantity' => $entry['quantity'],
+            'max_stack' => $entry['max_stack'],
             'locked_quantity' => $entry['locked_quantity'],
             'details' => array_merge($this->itemDetails($item, null, []), [
                 'Cantidad disponible: '.$entry['available_quantity'],

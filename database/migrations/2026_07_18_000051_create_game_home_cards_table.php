@@ -1,0 +1,3 @@
+<?php
+use Illuminate\Database\Migrations\Migration;use Illuminate\Database\Schema\Blueprint;use Illuminate\Support\Facades\Schema;
+class CreateGameHomeCardsTable extends Migration{public function up(){Schema::create('game_home_cards',function(Blueprint $t){$t->engine='InnoDB';$t->bigIncrements('id');$t->string('name');$t->string('code',64)->unique('game_home_cards_code_unique');$t->string('destination_type',40);$t->string('destination_value',191)->nullable();$t->unsignedInteger('sort_order')->default(0);$t->boolean('is_active')->default(false);$t->boolean('opens_new_tab')->default(false);$t->timestamps();$t->index(['is_active','sort_order'],'game_home_cards_active_order_index');});}public function down(){Schema::dropIfExists('game_home_cards');}}

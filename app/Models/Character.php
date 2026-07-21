@@ -14,7 +14,9 @@ class Character extends Model
 
     protected $casts = [
         'level' => 'integer',
+        'normalized_name' => 'string',
         'character_class_id' => 'integer',
+        'character_template_id' => 'integer',
         'experience' => 'integer',
         'current_health' => 'integer',
         'base_max_health' => 'integer',
@@ -32,6 +34,7 @@ class Character extends Model
     }
 
     public function characterClass(){return $this->belongsTo(CharacterClass::class);}
+    public function characterTemplate(){return $this->belongsTo(CharacterTemplate::class);}
 
     public function characterItems()
     {

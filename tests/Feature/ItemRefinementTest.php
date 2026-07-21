@@ -35,7 +35,7 @@ class ItemRefinementTest extends TestCase
 
     private function fixture($chance = 10000, $level = 0)
     {
-        $character=\App\Models\Character::factory()->create(['current_health'=>77]);
+        $character=\App\Models\Character::factory()->selected()->create(['current_health'=>77]);
         $equipment=Item::create(['code'=>'test_refinement_sword_'.uniqid(),'name'=>'Testing Sword','item_type'=>'equipment','equipment_type'=>'weapon','rarity'=>'common','is_stackable'=>false,'max_stack'=>1,'attack_bonus'=>10,'status'=>'active']);
         $material=Item::create(['code'=>'test_refinement_ore_'.uniqid(),'name'=>'Testing Ore','item_type'=>'material','rarity'=>'common','is_stackable'=>true,'max_stack'=>99,'status'=>'active']);
         $instance=ItemInstance::factory()->create(['character_id'=>$character->id,'item_id'=>$equipment->id,'refinement_level'=>$level]);

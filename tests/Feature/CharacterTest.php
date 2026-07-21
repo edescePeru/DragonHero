@@ -6,20 +6,30 @@ use App\Domain\Characters\Actions\CreateCharacterAction;
 use App\Domain\Characters\CharacterStatus;
 use App\Models\Character;
 use App\Models\User;
+use App\Models\CharacterTemplate;
+use App\Domain\Media\MediaAssetType;
 use App\Policies\CharacterPolicy;
 use Database\Seeders\CharacterLevelRequirementSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
+use Illuminate\Support\Facades\Storage;
 
 class CharacterTest extends TestCase
 {
     use RefreshDatabase;
+    private $template;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->seed(CharacterLevelRequirementSeeder::class);
+        Storage::fake('public');
+        $class = \App\Models\CharacterClass::where('code', 'adventurer')->firstOrFail();
+        $this->template = CharacterTemplate::factory()->create(['character_class_id' => $class->id, 'status' => 'active']);
+        $variants = [];
+        foreach ([128, 256, 512] as $size) { $variants[(string) $size] = 'templates/'.$size.'.webp'; Storage::disk('public')->put($variants[(string) $size], 'webp'); }
+        $this->template->mediaAssets()->create(['asset_type'=>MediaAssetType::BASE_VISUAL,'disk'=>'public','path'=>$variants['256'],'mime_type'=>'image/webp','width'=>256,'height'=>384,'file_size'=>4,'metadata'=>['character_visual_version'=>1,'root'=>'templates','body_type'=>$this->template->body_type,'canvas'=>['width'=>512,'height'=>768,'ratio'=>'2:3'],'variants'=>$variants],'is_primary'=>true,'sort_order'=>0]);
     }
 
     public function test_authenticated_user_without_character_sees_creation_screen()
@@ -38,10 +48,12 @@ class CharacterTest extends TestCase
     public function test_user_can_create_first_character_with_normalized_name()
     {
         $user = User::factory()->create();
-        $response = $this->actingAs($user)->post('/characters', ['name' => '  Sir   Dragon  ']);
+        $response = $this->actingAs($user)->post('/characters', ['name' => '  Sir   Dragon  ', 'template_id'=>$this->template->id]);
         $character = Character::query()->where('user_id', $user->id)->firstOrFail();
-        $response->assertRedirect(route('characters.show', $character));
+        $response->assertRedirect(route('dashboard'));
         $this->assertSame('Sir Dragon', $character->name);
+        $this->assertSame('sir dragon', $character->normalized_name);
+        $this->assertSame($character->id, $user->fresh()->active_character_id);
     }
 
     public function test_initial_stats_cannot_be_manipulated_from_request()
@@ -49,6 +61,7 @@ class CharacterTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user)->post('/characters', [
             'name' => 'ServidorSeguro', 'level' => 999, 'experience' => 999999,
+            'template_id' => $this->template->id,
             'current_health' => 9999, 'base_max_health' => 9999, 'base_attack' => 9999,
             'base_defense' => 9999, 'base_accuracy' => 9999, 'base_evasion' => 9999,
             'base_critical_rate' => 99.99, 'status' => CharacterStatus::BLOCKED,
@@ -66,21 +79,23 @@ class CharacterTest extends TestCase
         $this->assertSame(CharacterStatus::ACTIVE, $character->status);
     }
 
-    public function test_user_cannot_create_second_character_from_interface_or_action()
+    public function test_user_can_create_second_and_third_but_not_fourth_character()
     {
         $user = User::factory()->create();
         Character::factory()->for($user)->create();
-        $this->actingAs($user)->post('/characters', ['name' => 'Segundo'])->assertForbidden();
+        $this->actingAs($user)->post('/characters', ['name' => 'Segundo','template_id'=>$this->template->id])->assertRedirect(route('dashboard'));
+        app(CreateCharacterAction::class)->execute($user, 'Tercero', $this->template->id);
+        $this->assertSame(3, $user->characters()->count());
         $this->expectException(ValidationException::class);
-        app(CreateCharacterAction::class)->execute($user, 'Segundo');
+        app(CreateCharacterAction::class)->execute($user, 'Cuarto', $this->template->id);
     }
 
     public function test_user_can_only_view_own_character()
     {
         $owner = User::factory()->create();
         $otherUser = User::factory()->create();
-        $ownCharacter = Character::factory()->for($owner)->create();
-        $otherCharacter = Character::factory()->for($otherUser)->create();
+        $ownCharacter = Character::factory()->selectedFor($owner)->create();
+        $otherCharacter = Character::factory()->selectedFor($otherUser)->create();
         $this->actingAs($owner)->get(route('characters.show', $ownCharacter))->assertOk();
         $this->actingAs($owner)->get(route('characters.show', $otherCharacter))->assertForbidden();
     }
@@ -88,7 +103,7 @@ class CharacterTest extends TestCase
     public function test_invalid_name_is_rejected()
     {
         $user = User::factory()->create();
-        $this->actingAs($user)->post('/characters', ['name' => 'Mal@Nombre!'])->assertSessionHasErrors('name');
+        $this->actingAs($user)->post('/characters', ['name' => 'Mal@Nombre!','template_id'=>$this->template->id])->assertSessionHasErrors('name');
         $this->assertDatabaseCount('characters', 0);
     }
 
@@ -97,7 +112,7 @@ class CharacterTest extends TestCase
         $owner = User::factory()->create();
         Character::factory()->for($owner)->create(['name' => 'Dragon']);
         $user = User::factory()->create();
-        $this->actingAs($user)->post('/characters', ['name' => 'dragon'])->assertSessionHasErrors('name');
+        $this->actingAs($user)->post('/characters', ['name' => 'dragon','template_id'=>$this->template->id])->assertSessionHasErrors('name');
         $this->assertSame(1, Character::query()->count());
     }
 
@@ -105,14 +120,15 @@ class CharacterTest extends TestCase
     {
         $user = User::factory()->create();
         $this->actingAs($user)->get('/')->assertRedirect(route('characters.create'));
-        Character::factory()->for($user)->create();
-        $this->actingAs($user)->get('/')->assertOk()->assertViewIs('admin');
+        Character::factory()->selectedFor($user)->create();
+        $this->actingAs($user)->get('/')->assertOk()->assertViewIs('game-home.index');
     }
 
     public function test_character_policy_is_registered_and_enforces_rules()
     {
         $user = User::factory()->create();
         $character = Character::factory()->for($user)->create();
+        Character::factory()->for($user)->count(2)->create();
         $otherUser = User::factory()->create();
         $this->assertInstanceOf(CharacterPolicy::class, policy($character));
         $this->assertFalse($user->can('create', Character::class));

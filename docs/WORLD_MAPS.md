@@ -1,5 +1,15 @@
 # World Maps
 
+## Navegación geográfica del jugador
+
+La entrada principal es `/worlds`. Cada card abre `/worlds/{world}`, que valida el World activo y selecciona temporalmente su primera Region activa por `sort_order`, `name` e `id`. No se persiste todavía la última Region visitada. La ruta contextual `/worlds/{world}/regions/{region}` exige que la Region esté activa y pertenezca al World.
+
+Ambas rutas resuelven el `WorldMap` regional default activo mediante `WorldMapResolver` y reutilizan el renderer poligonal. El selector muestra exclusivamente Regions activas del World actual con mapa default disponible. Un World sin Regions o una Region inicial sin mapa presenta un fallback controlado.
+
+El flujo es `/worlds` → World → Region inicial → WorldMap default → WorldMapArea → Zone → Hunting. `/maps/{worldMap}` identifica una fila `WorldMap`, no un World ni una Region, y permanece como ruta técnica compatible. También se conservan `/maps`, las rutas contextuales antiguas y `/regions/{region}`.
+
+Los previews de World usan un `MediaAsset` primario de tipo `image` cuando existe; de lo contrario muestran fallback. La carga y administración específica de imágenes de World, última Region visitada, permisos por nivel y mantenedores nuevos quedan fuera de esta fase.
+
 `World`, `Region` y `Zone` siguen siendo dominio del juego. `WorldMap` representa una imagen contextual y `WorldMapArea` solo enlaza geometría visual con una acción validada. No contiene lógica de Hunt, loot o combate.
 
 ## Contextos y estados
@@ -36,3 +46,14 @@ php artisan storage:link
 ```
 
 La existencia física (`file_exists_on_disk`) y la accesibilidad pública (`public_url_available`) son conceptos distintos. `WorldMapImageService` prepara ambos datos. Las lecturas normales no realizan una petición HTTP por mapa; el despliegue debe verificar el enlace y el editor aplica un fallback seguro si el navegador no puede cargar la URL.
+
+## Administración de Worlds y Regions
+
+El contenido se mantiene desde `admin/content/worlds` y `admin/content/regions`, bajo la autorización interna `content.admin`, basada actualmente en `DRAGONHERO_ADMIN_EMAILS`. No existe todavía un catálogo RBAC granular.
+
+- `World` administra código, nombre, descripción, estado, orden y portada.
+- La portada es un `MediaAsset` primario `image`, procesado en variantes WebP; nunca se almacena en `world_maps`.
+- Al crear una `Region` desde un World, el parámetro `{world}` es autoritativo.
+- Una Region existente no puede cambiar de World en esta fase, para no volver inconsistentes sus Zones o WorldMaps.
+- «Administrar mapa» reutiliza el mantenedor de WorldMaps filtrado por Region; no duplica mapas, áreas ni polígonos.
+- Worlds y Regions se desactivan lógicamente. No existe borrado físico administrativo y las relaciones se conservan.

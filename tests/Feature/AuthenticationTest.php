@@ -29,7 +29,7 @@ class AuthenticationTest extends TestCase
             'password' => 'ClaveSegura123',
         ]);
 
-        $response->assertRedirect(route('dashboard'));
+        $response->assertRedirect(route('characters.create'));
         $this->assertAuthenticatedAs($user);
     }
 
@@ -59,7 +59,7 @@ class AuthenticationTest extends TestCase
             'terms' => '1',
         ]);
 
-        $response->assertRedirect(route('dashboard'));
+        $response->assertRedirect(route('characters.create'));
         $this->assertAuthenticated();
         $this->assertDatabaseHas('users', [
             'name' => 'Heroe de Prueba',

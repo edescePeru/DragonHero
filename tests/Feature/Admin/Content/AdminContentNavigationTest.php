@@ -21,7 +21,7 @@ class AdminContentNavigationTest extends TestCase
     public function test_authorized_user_sees_content_admin_link()
     {
         $admin = User::factory()->create(['email' => 'admin@example.test']);
-        Character::factory()->for($admin)->create();
+        Character::factory()->selectedFor($admin)->create();
 
         $this->actingAs($admin)->get(route('dashboard'))
             ->assertOk()
@@ -32,7 +32,7 @@ class AdminContentNavigationTest extends TestCase
     public function test_normal_user_does_not_see_link_and_direct_access_remains_forbidden()
     {
         $player = User::factory()->create(['email' => 'player@example.test']);
-        Character::factory()->for($player)->create();
+        Character::factory()->selectedFor($player)->create();
 
         $this->actingAs($player)->get(route('dashboard'))
             ->assertOk()

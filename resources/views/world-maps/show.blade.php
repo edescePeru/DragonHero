@@ -5,23 +5,24 @@
 @section('content')
 <div id="world-map-player" data-world-map-player data-csrf="{{ csrf_token() }}" data-player-state="loading">
     <div class="d-flex justify-content-between flex-wrap gap-3 mb-3">
+        <div><h1>{{ $worldMap['map']['name'] }}</h1><p>{{ $worldMap['map']['context']['name'] }}</p></div>
         <div>
-            <h1>{{ $worldMap['map']['name'] }}</h1>
-            <p>{{ $worldMap['map']['context']['name'] }}</p>
-        </div>
-        <div>
-            <label class="form-label">World / Region</label>
-            <select class="form-select" onchange="if(this.value) window.location.assign(this.value)">
-                <option value="">Seleccionar mapa</option>
-                @foreach($worldMap['selectors'] as $world)
-                    @if($world['map_url'])
-                        <option value="{{ $world['map_url'] }}">{{ $world['name'] }}</option>
-                    @endif
-                    @foreach($world['regions'] as $region)
-                        <option value="{{ $region['map_url'] }}">{{ $world['name'] }} › {{ $region['name'] }}</option>
+            @if(isset($worldMap['navigation']))
+                <div class="small text-secondary">Mundo</div><div class="fw-semibold mb-2">{{ $worldMap['navigation']['world']->name }}</div>
+                <label class="form-label" for="world-region-selector">Región</label>
+                <select id="world-region-selector" class="form-select" onchange="if(this.value) window.location.assign(this.value)">
+                    @foreach($worldMap['navigation']['regions'] as $region)<option value="{{ $region['url'] }}" @if($region['id']===$worldMap['navigation']['region']->id) selected @endif>{{ $region['name'] }}</option>@endforeach
+                </select>
+            @else
+                <label class="form-label">World / Region</label>
+                <select class="form-select" onchange="if(this.value) window.location.assign(this.value)">
+                    <option value="">Seleccionar mapa</option>
+                    @foreach($worldMap['selectors'] as $world)
+                        @if($world['map_url'])<option value="{{ $world['map_url'] }}">{{ $world['name'] }}</option>@endif
+                        @foreach($world['regions'] as $region)<option value="{{ $region['map_url'] }}">{{ $world['name'] }} › {{ $region['name'] }}</option>@endforeach
                     @endforeach
-                @endforeach
-            </select>
+                </select>
+            @endif
         </div>
     </div>
 
@@ -52,16 +53,8 @@
             </div>
         </div>
         <div class="col-lg-4">
-            <aside class="card d-none" data-world-map-panel aria-live="polite">
-                <div class="card-body">
-                    <h2 class="h4" data-panel-title>Destino</h2>
-                    <div data-panel-body></div>
-                    <a class="btn btn-primary d-none mt-3" data-panel-link href="#">Abrir destino</a>
-                </div>
-            </aside>
-            <div class="card" data-map-help>
-                <div class="card-body">Selecciona un área del mapa mediante click, Enter o Espacio.</div>
-            </div>
+            <aside class="card d-none" data-world-map-panel aria-live="polite"><div class="card-body"><h2 class="h4" data-panel-title>Destino</h2><div data-panel-body></div><a class="btn btn-primary d-none mt-3" data-panel-link href="#">Abrir destino</a></div></aside>
+            <div class="card" data-map-help><div class="card-body">Selecciona un área del mapa mediante click, Enter o Espacio.</div></div>
         </div>
     </div>
 </div>

@@ -15,5 +15,6 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(WorldCatalogSeeder::class);
         $this->call(CharacterLevelRequirementSeeder::class);
+        $this->call(GameHomeCardSeeder::class);
     }
 }

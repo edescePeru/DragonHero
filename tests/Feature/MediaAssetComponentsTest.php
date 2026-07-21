@@ -37,7 +37,7 @@ class MediaAssetComponentsTest extends TestCase
     private function player()
     {
         $user = User::factory()->create();
-        return [$user, Character::factory()->for($user)->create()];
+        return [$user, Character::factory()->selectedFor($user)->create()];
     }
 
     private function countMediaQueries($operation)

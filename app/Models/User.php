@@ -40,10 +40,16 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'active_character_id' => 'integer',
     ];
 
     public function characters()
     {
         return $this->hasMany(Character::class);
+    }
+
+    public function activeCharacter()
+    {
+        return $this->belongsTo(Character::class, 'active_character_id');
     }
 }

@@ -9,30 +9,27 @@ use App\Domain\Media\MediaAssetType;
 use App\Domain\Equipment\CharacterEquipmentSummaryService;
 use App\Http\Requests\Characters\CreateCharacterRequest;
 use App\Models\Character;
+use App\Domain\Characters\Templates\CharacterTemplateReadService;
+use App\Domain\Characters\Accounts\CharacterAccountLimit;
 use Illuminate\Http\Request;
 
 class CharacterController extends Controller
 {
-    public function create(Request $request)
+    public function create(Request $request, CharacterTemplateReadService $templates)
     {
-        $existingCharacter = $request->user()->characters()->first();
-
-        if ($existingCharacter) {
-            return redirect()->route('characters.show', $existingCharacter);
-        }
-
         $this->authorize('create', Character::class);
 
-        return view('characters.create');
+        return view('characters.create', $templates->creationOptions());
     }
 
     public function store(CreateCharacterRequest $request, CreateCharacterAction $action)
     {
         $this->authorize('create', Character::class);
 
-        $character = $action->execute($request->user(), $request->validated()['name']);
+        $data = $request->validated();
+        $character = $action->execute($request->user(), $data['name'], $data['template_id']);
 
-        return redirect()->route('characters.show', $character);
+        return redirect()->route('dashboard');
     }
 
     public function show(

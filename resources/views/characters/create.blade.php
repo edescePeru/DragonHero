@@ -1,41 +1,5 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Crear personaje - A4gamesDH</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('assets/images/favicon-32x32.png') }}">
-  <script type="module" src="{{ asset('assets/js/main.js') }}"></script>
-  <link rel="stylesheet" href="{{ asset('assets/css/main.css') }}">
-</head>
-<body>
-  <div class="container d-flex align-items-center justify-content-center min-vh-100 py-5">
-    <div class="card" style="max-width: 560px; width: 100%;">
-      <div class="card-body p-5">
-        <div class="text-center mb-4">
-          <img src="{{ asset('assets/images/logo.svg') }}" alt="A4gamesDH" class="mb-4">
-          <h1 class="h3 mb-2">Crea tu personaje</h1>
-          <p class="text-secondary mb-0">Elige el nombre con el que comenzarás tu aventura.</p>
-        </div>
-        @if ($errors->any())
-          <div class="alert alert-danger">{{ $errors->first() }}</div>
-        @endif
-        <form method="POST" action="{{ route('characters.store') }}">
-          @csrf
-          <div class="mb-4">
-            <label for="name" class="form-label">Nombre del personaje</label>
-            <input id="name" name="name" type="text" maxlength="32" value="{{ old('name') }}"
-              class="form-control @error('name') is-invalid @enderror" required autofocus>
-            <div class="form-text">Entre 3 y 32 caracteres: letras, números, espacios, guion o guion bajo.</div>
-          </div>
-          <button type="submit" class="btn btn-primary w-100">Crear personaje</button>
-        </form>
-        <form method="POST" action="{{ route('logout') }}" class="text-center mt-3">
-          @csrf
-          <button type="submit" class="btn btn-link text-secondary">Cerrar sesión</button>
-        </form>
-      </div>
-    </div>
-  </div>
-</body>
-</html>
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Crear personaje - DragonHero</title><meta name="viewport" content="width=device-width, initial-scale=1"><script type="module" src="{{ asset('assets/js/main.js') }}"></script><link rel="stylesheet" href="{{ asset('assets/css/main.css') }}"><style>.template-card{cursor:pointer}.template-card:has(input:checked){outline:3px solid var(--bs-primary)}.template-visual{width:256px;height:384px;max-width:100%;object-fit:contain}</style></head><body><main class="container py-5"><div class="d-flex justify-content-between align-items-center mb-4"><div><h1 class="h2 mb-1">Crea tu héroe</h1><p class="text-secondary mb-0">Escoge clase, presentación y plantilla. El nombre será único en todo DragonHero.</p></div>@if(auth()->user()->characters()->exists())<a class="btn btn-outline-secondary" href="{{ route('characters.select') }}">Volver al selector</a>@endif</div>@if($errors->any())<div class="alert alert-danger" role="alert">{{ $errors->first() }}</div>@endif
+@if($templates->isEmpty())<div class="alert alert-warning">No hay plantillas de personaje disponibles en este momento.</div>@else<form method="POST" action="{{ route('characters.store') }}">@csrf
+<section class="card mb-4"><div class="card-body"><span class="badge bg-primary mb-2">Pasos 1–3</span><h2 class="h4">Escoge clase, presentación y plantilla</h2><p class="text-secondary">Cada grupo muestra únicamente combinaciones públicas disponibles.</p>
+@foreach($templateGroups as $classGroup)<div class="mb-4"><h3 class="h5">{{ $classGroup['name'] }}</h3>@foreach($classGroup['genders'] as $genderGroup)<h4 class="h6 text-secondary">{{ $genderGroup['label'] }}</h4><div class="row g-3 mb-3">@foreach($genderGroup['templates'] as $row)@php($template=$row['model'])<div class="col-md-6 col-xl-4"><label class="card template-card h-100 p-3 text-center"><input class="form-check-input mx-auto mb-2" type="radio" name="template_id" value="{{ $template->id }}" @if((string)old('template_id')===(string)$template->id) checked @endif required><img src="{{ $row['visual']->url256() }}" width="256" height="384" class="template-visual mx-auto" alt="Cuerpo base de {{ $template->name }}"><strong class="mt-2">{{ $template->name }}</strong><small>{{ $template->characterClass->name }} · {{ $row['presentation_label'] }}</small>@if($template->description)<p class="small text-secondary mt-2 mb-2">{{ $template->description }}</p>@endif<small>Vida {{ $template->base_max_health }} · Ataque {{ $template->base_attack }} · Defensa {{ $template->base_defense }}</small></label></div>@endforeach</div>@endforeach</div>@endforeach</div></section>
+<section class="card"><div class="card-body"><span class="badge bg-primary mb-2">Pasos 4–5</span><h2 class="h4">Escribe y confirma tu nickname</h2><label for="name" class="form-label">Nombre del personaje</label><input id="name" name="name" minlength="3" maxlength="20" value="{{ old('name') }}" class="form-control" required><div class="form-text">3–20 caracteres: letras, números y espacios. Debe ser único globalmente; no se permiten nombres reservados ni formados solo por números.</div><button class="btn btn-primary w-100 mt-4">Crear personaje y entrar</button></div></section></form>@endif<form method="POST" action="{{ route('logout') }}" class="text-center mt-3">@csrf<button class="btn btn-link text-secondary">Cerrar sesión</button></form></main></body></html>

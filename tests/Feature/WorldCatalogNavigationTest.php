@@ -14,7 +14,7 @@ use Tests\TestCase;
 class WorldCatalogNavigationTest extends TestCase {
  use RefreshDatabase;
  protected function setUp():void{parent::setUp();$this->seed(WorldCatalogSeeder::class);$this->seed(CharacterLevelRequirementSeeder::class);}
- private function player(){ $user=User::factory()->create();Character::factory()->for($user)->create();return $user; }
+ private function player(){ $user=User::factory()->create();Character::factory()->selectedFor($user)->create();return $user; }
  public function test_guest_cannot_browse_catalog(){ $this->get('/worlds')->assertRedirect('/login'); }
  public function test_user_without_character_keeps_creation_flow(){ $this->actingAs(User::factory()->create())->get('/worlds')->assertRedirect(route('characters.create')); }
  public function test_player_can_navigate_world_region_and_zone(){ $user=$this->player();$world=World::where('code','eldoria')->firstOrFail();$region=$world->regions()->firstOrFail();$zone=$region->zones()->where('code','grey_oak_forest')->firstOrFail();$this->actingAs($user)->get('/worlds')->assertOk()->assertSee('Eldoria');$this->actingAs($user)->get(route('worlds.show',$world))->assertOk()->assertSee('Reino de Valtheria');$this->actingAs($user)->get(route('regions.show',$region))->assertOk()->assertSee('Bosque de Roblegris');$this->actingAs($user)->get(route('zones.show',$zone))->assertOk()->assertSee('Lobo gris')->assertSee('Pesos de configuración')->assertSee('Aldea del Alba')->assertSee('Minas Abandonadas'); }

@@ -59,3 +59,6 @@ Los componentes disponibles son:
 El inventario conserva sus DTO `InventoryEntry`; el controlador crea por separado un mapa de modelos Item con sus iconos ya cargados. Si falta un Item, el DTO sigue mostrándose con placeholder y sin consulta individual.
 
 El componente sprite representa por ahora el sprite sheet como una imagen estática. La lectura de metadata, reproducción de frames y animación se implementarán en una fase posterior.
+# Banner de la Home
+
+`home_card_banner` es un recurso primario 1200 × 400 exclusivo de `GameHomeCard`. No se mezcla con iconos, retratos, cuerpos ni capas equipadas. Véase `docs/GAME_HOME_CARDS.md`.
