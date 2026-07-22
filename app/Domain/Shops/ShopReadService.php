@@ -26,13 +26,15 @@ final class ShopReadService
     private $validator;
     private $wallet;
     private $projection;
+    private $sales;
 
-    public function __construct(ShopAvailabilityService $availability, ShopCatalogValidator $validator, WalletService $wallet, InventoryCapacityProjectionService $projection)
+    public function __construct(ShopAvailabilityService $availability, ShopCatalogValidator $validator, WalletService $wallet, InventoryCapacityProjectionService $projection, ShopSaleReadService $sales)
     {
         $this->availability = $availability;
         $this->validator = $validator;
         $this->wallet = $wallet;
         $this->projection = $projection;
+        $this->sales = $sales;
     }
 
     public function shop(User $user, Character $character, Shop $shop, $zoneId = null)
@@ -112,6 +114,7 @@ final class ShopReadService
         $banner = $shop->mediaAssets->firstWhere('asset_type', MediaAssetType::BANNER);
         $background = $shop->mediaAssets->firstWhere('asset_type', MediaAssetType::BACKGROUND);
         $capacity = $baseCapacity->toArray();
+        $saleCatalog = $this->sales->catalog($user, $character, $shop, $zoneId)->toArray();
 
         return new ShopViewData([
             'character' => $character,
@@ -122,6 +125,9 @@ final class ShopReadService
             'gold' => $gold,
             'inventory' => ['used' => $capacity['current_used_slots'], 'capacity' => $capacity['effective_capacity']],
             'return_url' => $returnUrl,
+            'saleCatalog' => $saleCatalog,
+            'shopCanBuy' => $saleCatalog['shop_can_buy'],
+            'sellableCount' => $saleCatalog['sellable_count'],
         ]);
     }
 

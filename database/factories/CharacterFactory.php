@@ -17,7 +17,7 @@ class CharacterFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'character_class_id' => function(){return CharacterClass::firstOrCreate(['code'=>'adventurer'],['name'=>'Aventurero','description'=>'Clase neutral inicial.','status'=>'active','sort_order'=>0])->id;},
+            'character_class_id' => function(){return CharacterClass::where('status','active')->orderBy('sort_order')->orderBy('id')->value('id') ?: CharacterClass::factory()->create()->id;},
             'name' => $this->faker->unique()->userName,
             'normalized_name' => function (array $attributes) {
                 return mb_strtolower(preg_replace('/\s+/u', ' ', trim($attributes['name'])), 'UTF-8');

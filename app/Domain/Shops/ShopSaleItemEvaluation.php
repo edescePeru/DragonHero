@@ -1,0 +1,1 @@
+<?php namespace App\Domain\Shops;final class ShopSaleItemEvaluation{private $eligible;private $code;public function __construct($eligible,$code=null){$this->eligible=$eligible;$this->code=$code;}public function eligible(){return$this->eligible;}public function reasonCode(){return$this->code;}}

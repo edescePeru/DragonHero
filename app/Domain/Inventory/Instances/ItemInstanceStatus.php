@@ -1,2 +1,2 @@
 <?php
-namespace App\Domain\Inventory\Instances;final class ItemInstanceStatus{const AVAILABLE='available';const EQUIPPED='equipped';public static function values(){return[self::AVAILABLE,self::EQUIPPED];}private function __construct(){}}
+namespace App\Domain\Inventory\Instances;final class ItemInstanceStatus{const AVAILABLE='available';const EQUIPPED='equipped';const SOLD='sold';public static function values(){return[self::AVAILABLE,self::EQUIPPED,self::SOLD];}public static function canTransition($from,$to){if($from===self::AVAILABLE)return in_array($to,[self::EQUIPPED,self::SOLD],true);if($from===self::EQUIPPED)return$to===self::AVAILABLE;return false;}private function __construct(){}}

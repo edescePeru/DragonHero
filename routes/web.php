@@ -23,6 +23,7 @@ use App\Http\Controllers\CharacterItemRefinementController;
 use App\Http\Controllers\CharacterOverviewController;
 use App\Http\Controllers\ManualCombatController;
 use App\Http\Controllers\ShopPurchaseController;
+use App\Http\Controllers\ShopSaleController;
 use App\Http\Controllers\ShopController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Content\ItemController as AdminItemController;
@@ -35,6 +36,7 @@ use App\Http\Controllers\Admin\Content\RefinementStatModifierController as Admin
 use App\Http\Controllers\Admin\Content\WorldMapController as AdminWorldMapController;
 use App\Http\Controllers\Admin\Content\WorldMapAreaController as AdminWorldMapAreaController;
 use App\Http\Controllers\Admin\Content\CharacterTemplateController as AdminCharacterTemplateController;
+use App\Http\Controllers\Admin\Content\CharacterClassController as AdminCharacterClassController;
 use App\Http\Controllers\Admin\Content\GameHomeCardController as AdminGameHomeCardController;
 use App\Http\Controllers\Admin\Content\ItemVisualAssetController as AdminItemVisualAssetController;
 use App\Http\Controllers\Admin\Content\RegionController as AdminRegionController;
@@ -80,6 +82,7 @@ Route::middleware(['auth', 'game.navigation'])->group(function () {
     Route::post('/characters/{character}/equipment/unequip', [CharacterEquipmentController::class, 'unequip'])->name('characters.equipment.unequip');
     Route::post('/characters/{character}/item-instances/{itemInstance}/refine', CharacterItemRefinementController::class)->name('characters.item-instances.refine');
     Route::post('/characters/{character}/shops/{shop}/offers/{offer}/purchases', [ShopPurchaseController::class, 'store'])->name('characters.shops.offers.purchases.store');
+    Route::post('/characters/{character}/shops/{shop}/sales', [ShopSaleController::class, 'store'])->name('characters.shops.sales.store');
     Route::get('/characters/{character}/shops/{shop}', [ShopController::class, 'show'])->name('characters.shops.show');
     });
 
@@ -106,6 +109,11 @@ Route::middleware(['auth', 'game.navigation', 'character.required'])->group(func
 });
 
 Route::prefix('admin/content')->name('admin.content.')->middleware(['auth','game.navigation','content.admin'])->group(function(){
+    Route::patch('character-classes/{character_class}/activate',[AdminCharacterClassController::class,'activate'])->name('character-classes.activate');
+    Route::patch('character-classes/{character_class}/deactivate',[AdminCharacterClassController::class,'deactivate'])->name('character-classes.deactivate');
+    Route::patch('character-classes/{character_class}/hide',[AdminCharacterClassController::class,'hide'])->name('character-classes.hide');
+    Route::delete('character-classes/{character_class}/icon',[AdminCharacterClassController::class,'destroyIcon'])->name('character-classes.icon.destroy');
+    Route::resource('character-classes',AdminCharacterClassController::class)->only(['index','create','store','edit','update'])->parameters(['character-classes'=>'character_class']);
     Route::patch('npcs/{npc}/activate',[AdminNpcController::class,'activate'])->name('npcs.activate');
     Route::patch('npcs/{npc}/deactivate',[AdminNpcController::class,'deactivate'])->name('npcs.deactivate');
     Route::resource('npcs',AdminNpcController::class)->only(['index','create','store','edit','update']);

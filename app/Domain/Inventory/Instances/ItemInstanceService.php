@@ -10,6 +10,7 @@ use App\Models\Item;
 use App\Models\ItemInstance;
 use App\Models\ItemInstanceEvent;
 use App\Models\ShopPurchase;
+use App\Models\ShopSale;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +20,8 @@ use RuntimeException;
 final class ItemInstanceService
 {
     private $classification;
-    public function __construct(ItemClassification $classification) { $this->classification = $classification; }
+    private $events;
+    public function __construct(ItemClassification $classification, ItemInstanceEventService $events) { $this->classification = $classification; $this->events = $events; }
 
     public function createFromRewardLocked(Character $character, HuntRewardItem $line, Item $item, string $operationUuid, CarbonImmutable $now): Collection
     {
@@ -70,6 +72,21 @@ final class ItemInstanceService
             $results->push($this->entry($instance, $item));
         }
         return $results;
+    }
+
+    public function markSoldToShopLocked(Character $character, ItemInstance $instance, ShopSale $sale, CarbonImmutable $now)
+    {
+        if (DB::transactionLevel() < 1) throw new RuntimeException('Active transaction required.');
+        if (!$character->exists || !$instance->exists || !$sale->exists) throw new InvalidArgumentException('Persisted Shop sale context is required.');
+        if ((int) $instance->character_id !== (int) $character->id || (int) $sale->character_id !== (int) $character->id || (int) $sale->item_instance_id !== (int) $instance->id || (int) $sale->item_id !== (int) $instance->item_id) throw new InvalidArgumentException('ShopSale ItemInstance context mismatch.');
+        if (!$instance->isAvailable()) throw new InvalidArgumentException('Only an available ItemInstance can be sold.');
+        if ($instance->equipment()->exists()) throw new InvalidArgumentException('Equipped ItemInstance must be unequipped before sale.');
+        $before = $instance->status;
+        $instance->status = ItemInstanceStatus::SOLD;
+        $instance->save();
+        $metadata = ['shop_sale_id'=>(int)$sale->id,'shop_id'=>(int)$sale->shop_id,'character_id'=>(int)$character->id,'item_id'=>(int)$instance->item_id,'item_instance_uuid'=>$instance->uuid,'refinement_level'=>(int)$instance->refinement_level,'status_before'=>$before,'sold_at'=>$now->toIso8601String()];
+        $this->events->appendSoldToShop($instance,$character,$sale,$metadata,$now);
+        return $instance;
     }
 
     private function createLocked(Character $character, $line, Item $item, string $operationUuid, CarbonImmutable $now, $originType, $eventType, $uuidPrefix)

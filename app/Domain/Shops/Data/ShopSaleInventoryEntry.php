@@ -1,0 +1,1 @@
+<?php namespace App\Domain\Shops\Data;final class ShopSaleInventoryEntry{private $data;public function __construct(array $data){$this->data=array_merge([],$data);}public function canSell(){return$this->data['can_sell'];}public function toArray(){return array_merge([],$this->data);}}

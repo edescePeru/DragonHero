@@ -27,6 +27,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
         Schema::defaultStringLength(191);
-        Relation::enforceMorphMap(['game_home_card'=>\App\Models\GameHomeCard::class,'character'=>\App\Models\Character::class,'character_template'=>\App\Models\CharacterTemplate::class,'monster'=>\App\Models\Monster::class,'item'=>\App\Models\Item::class,'zone'=>\App\Models\Zone::class,'region'=>\App\Models\Region::class,'world'=>\App\Models\World::class,'npc'=>\App\Models\Npc::class,'shop'=>\App\Models\Shop::class]);
+        Relation::enforceMorphMap(['game_home_card'=>\App\Models\GameHomeCard::class,'character'=>\App\Models\Character::class,'character_class'=>\App\Models\CharacterClass::class,'character_template'=>\App\Models\CharacterTemplate::class,'monster'=>\App\Models\Monster::class,'item'=>\App\Models\Item::class,'zone'=>\App\Models\Zone::class,'region'=>\App\Models\Region::class,'world'=>\App\Models\World::class,'npc'=>\App\Models\Npc::class,'shop'=>\App\Models\Shop::class]);
     }
 }

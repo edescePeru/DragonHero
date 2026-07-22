@@ -46,7 +46,7 @@ if (root) {
   const refreshPresentation = (data, offer) => {
     if (data.current_gold_balance !== null) {
       root.dataset.currentGold = String(data.current_gold_balance);
-      root.querySelector('[data-shop-gold]').textContent = String(data.current_gold_balance);
+      root.querySelectorAll('[data-shop-gold],[data-current-gold]').forEach((node) => { node.textContent = String(data.current_gold_balance); });
     }
     if (data.inventory_slots_used !== null) {
       root.dataset.inventoryUsed = String(data.inventory_slots_used);
