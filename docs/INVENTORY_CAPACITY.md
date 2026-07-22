@@ -8,6 +8,6 @@ La capacidad efectiva es la base más grants vigentes. Un grant está vigente si
 
 La base inicial actual es 30, no un máximo. La progresión puede producir 40, 50 o 60; 200 es solo el límite técnico. La reserva preventiva centralizada actual es 5. `claimFits` indica si toda la proyección cabe; `huntingCanContinue` exige además conservar la reserva. Si vence un bonus y el inventario excede la capacidad, se informa el déficit sin borrar objetos, grants ni recompensas.
 
-No existe transferencia ni reclamación en esta fase. El futuro claim debe reutilizar `PendingRewardCapacityService` e `InventorySlotCalculator` y recalcular bajo locks; no debe introducir otra fórmula.
+`InventoryCapacityProjectionService` es la autoridad genérica para proyectar entregas sobre inventario cargado. Distingue slots actuales, capacidad efectiva y slots finales para apilables e ItemInstances. `PendingRewardCapacityService` conserva su API y delega en ella. Claims y compras reutilizan la misma fórmula; una compra voluntaria exige que toda la entrega quepa, pero no reserva los cinco slots preventivos de cacería.
 
 Orden de locks de sesión: Character, HuntingSession cuando existe, Zone/catálogo y luego recursos de capacidad (`character_items`, rewards pending y líneas). Las lecturas GET son snapshots informativos sin locks. `InventoryService` permanece como única autoridad de mutación del inventario y no se usa para simular slots.

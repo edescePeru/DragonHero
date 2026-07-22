@@ -1,4 +1,77 @@
 <?php
+
 namespace App\Domain\Inventory\Capacity;
-use App\Domain\Hunts\Rewards\HuntRewardStatus;use App\Domain\Inventory\Instances\ItemInstanceInventoryPolicy;use App\Domain\Inventory\ItemClassification;use App\Models\Character;use App\Models\CharacterItem;use App\Models\HuntReward;use App\Models\HuntRewardItem;use App\Models\Item;use App\Models\ItemInstance;use Carbon\CarbonImmutable;use Illuminate\Support\Facades\DB;use InvalidArgumentException;
-final class PendingRewardCapacityService{private $slots;private $capacity;private $classification;private $instancePolicy;public function __construct(InventorySlotCalculator $slots,InventoryCapacityCalculator $capacity,ItemClassification $classification,ItemInstanceInventoryPolicy $instancePolicy){$this->slots=$slots;$this->capacity=$capacity;$this->classification=$classification;$this->instancePolicy=$instancePolicy;}public function snapshot(Character $character,CarbonImmutable $now=null){return$this->calculate($character,$now?:CarbonImmutable::now(),false);}public function locked(Character $character,CarbonImmutable $now){if(DB::transactionLevel()<1)throw new \RuntimeException('Active transaction required.');return$this->calculate($character,$now,true);}public function fromLoadedState(Character $character,$inventory,$rewardItems,$items,CarbonImmutable $now,$instances=null){$instances=$instances?:collect();list($effective,$permanent,$temporary)=$this->capacity->effective($character,$now);$allIds=$inventory->pluck('item_id')->merge($rewardItems->pluck('item_id'))->merge($instances->pluck('item_id'))->unique();$missing=$allIds->filter(function($id)use($items){return!$items->has($id);})->values();if($missing->isNotEmpty())$items=$items->union(Item::whereIn('id',$missing)->get()->keyBy('id'));$current=[];$projected=[];foreach($inventory as $entry){$item=$items->get($entry->item_id);if(!$item||$this->classification->classify($item)!==ItemClassification::STACKABLE)throw new InvalidArgumentException('Aggregated inventory requires coherent stackable Items.');$line=$this->line($entry->item_id,$entry->quantity,$item);$current[]=$line;$projected[]=$line;}$instanceSlots=0;foreach($instances as $instance){$item=$items->get($instance->item_id);if(!$item||$this->classification->classify($item)!==ItemClassification::UNIQUE)throw new InvalidArgumentException('ItemInstance requires a coherent unique Item.');if($this->instancePolicy->occupiesInventory($instance->status))$instanceSlots++;}$pendingUnique=0;foreach($rewardItems as $entry){$item=$items->get($entry->item_id);if(!$item)throw new InvalidArgumentException('Pending reward Item is missing.');$kind=$this->classification->classify($item);$quantity=$this->safeInteger($entry->quantity);if($kind===ItemClassification::STACKABLE)$projected[]=$this->line($entry->item_id,$quantity,$item);else{if($quantity>PHP_INT_MAX-$pendingUnique)throw new InvalidArgumentException('Pending unique Item overflow.');$pendingUnique+=$quantity;}}return$this->capacity->result($effective,$permanent,$temporary,$this->slots->calculate($current,$instanceSlots)->slots(),$this->slots->calculate($projected,$instanceSlots+$pendingUnique)->slots());}private function calculate(Character $character,CarbonImmutable $now,$lock){$inventoryQuery=CharacterItem::where('character_id',$character->id)->orderBy('id');if($lock)$inventoryQuery->lockForUpdate();$inventory=$inventoryQuery->get();$instancesQuery=ItemInstance::where('character_id',$character->id)->orderBy('id');if($lock)$instancesQuery->lockForUpdate();$instances=$instancesQuery->get();$rewardQuery=HuntReward::query()->select('hunt_rewards.*')->join('hunting_sessions','hunting_sessions.id','=','hunt_rewards.hunting_session_id')->where('hunting_sessions.character_id',$character->id)->where('hunt_rewards.status',HuntRewardStatus::PENDING)->orderBy('hunt_rewards.id');if($lock)$rewardQuery->lockForUpdate();$rewards=$rewardQuery->get();$rewardItems=$rewards->isEmpty()?collect():HuntRewardItem::whereIn('hunt_reward_id',$rewards->pluck('id'))->orderBy('id')->when($lock,function($q){$q->lockForUpdate();})->get();$itemIds=$inventory->pluck('item_id')->merge($rewardItems->pluck('item_id'))->merge($instances->pluck('item_id'))->unique()->values();$items=Item::whereIn('id',$itemIds)->get()->keyBy('id');return$this->fromLoadedState($character,$inventory,$rewardItems,$items,$now,$instances);}private function line($itemId,$quantity,Item $item){return['item_id'=>(int)$itemId,'quantity'=>$this->safeInteger($quantity),'max_stack'=>$this->safeInteger($item->max_stack)];}private function safeInteger($value){if(is_int($value)&&$value>=0)return$value;if(!is_string($value)||!preg_match('/^(0|[1-9][0-9]*)$/',$value)||strlen($value)>strlen((string)PHP_INT_MAX)||(strlen($value)===strlen((string)PHP_INT_MAX)&&strcmp($value,(string)PHP_INT_MAX)>0))throw new InvalidArgumentException('Quantity exceeds safe PHP integer range.');return(int)$value;}}
+
+use App\Domain\Hunts\Rewards\HuntRewardStatus;
+use App\Models\Character;
+use App\Models\CharacterItem;
+use App\Models\HuntReward;
+use App\Models\HuntRewardItem;
+use App\Models\Item;
+use App\Models\ItemInstance;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
+
+final class PendingRewardCapacityService
+{
+    private $projection;
+
+    public function __construct(InventoryCapacityProjectionService $projection)
+    {
+        $this->projection = $projection;
+    }
+
+    public function snapshot(Character $character, CarbonImmutable $now = null)
+    {
+        return $this->calculate($character, $now ?: CarbonImmutable::now(), false);
+    }
+
+    public function locked(Character $character, CarbonImmutable $now)
+    {
+        if (DB::transactionLevel() < 1) {
+            throw new \RuntimeException('Active transaction required.');
+        }
+
+        return $this->calculate($character, $now, true);
+    }
+
+    public function fromLoadedState(Character $character, $inventory, $rewardItems, $items, CarbonImmutable $now, $instances = null)
+    {
+        return $this->projection->fromLoadedState($character, $inventory, $rewardItems, $items, $now, $instances);
+    }
+
+    private function calculate(Character $character, CarbonImmutable $now, $lock)
+    {
+        $inventoryQuery = CharacterItem::where('character_id', $character->id)->orderBy('id');
+        if ($lock) {
+            $inventoryQuery->lockForUpdate();
+        }
+        $inventory = $inventoryQuery->get();
+
+        $instancesQuery = ItemInstance::where('character_id', $character->id)->orderBy('id');
+        if ($lock) {
+            $instancesQuery->lockForUpdate();
+        }
+        $instances = $instancesQuery->get();
+
+        $rewardQuery = HuntReward::query()->select('hunt_rewards.*')
+            ->join('hunting_sessions', 'hunting_sessions.id', '=', 'hunt_rewards.hunting_session_id')
+            ->where('hunting_sessions.character_id', $character->id)
+            ->where('hunt_rewards.status', HuntRewardStatus::PENDING)
+            ->orderBy('hunt_rewards.id');
+        if ($lock) {
+            $rewardQuery->lockForUpdate();
+        }
+        $rewards = $rewardQuery->get();
+        $rewardItems = $rewards->isEmpty() ? collect() : HuntRewardItem::whereIn('hunt_reward_id', $rewards->pluck('id'))
+            ->orderBy('id')->when($lock, function ($query) {
+                $query->lockForUpdate();
+            })->get();
+
+        $itemIds = $inventory->pluck('item_id')->merge($rewardItems->pluck('item_id'))
+            ->merge($instances->pluck('item_id'))->unique()->values();
+        $items = Item::whereIn('id', $itemIds)->get()->keyBy('id');
+
+        return $this->projection->fromLoadedState($character, $inventory, $rewardItems, $items, $now, $instances);
+    }
+}

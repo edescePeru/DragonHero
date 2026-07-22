@@ -28,7 +28,9 @@ El virtual host debe apuntar al directorio `public/` del proyecto.
 
 ## Assets de la plantilla
 
-`src/` contiene las fuentes originales de la plantilla y Vite genera `dist/` mediante `npm run build`. Laravel sirve actualmente los assets integrados desde `public/assets/`; por ello `dist/` no se versiona.
+`src/` contiene las fuentes originales. `npm run build` compila primero la plantilla con Vite en `dist/` y después publica automáticamente `dist/assets/` sobre `public/assets/`, que es la carpeta servida por Laravel. La publicación conserva archivos públicos ajenos a Vite y falla si no existe `dist/assets/js/main.js`. No debe copiarse el bundle manualmente. `dist/` continúa siendo un artefacto temporal no versionado.
+
+El layout agrega `?v=` usando `filemtime(public/assets/js/main.js)`. Para comprobar una publicación puede verificarse que el bundle público tenga una fecha nueva y contenga las firmas del módulo esperado, por ejemplo `data-shop-catalog` para Shops.
 
 ## Base de datos para pruebas
 

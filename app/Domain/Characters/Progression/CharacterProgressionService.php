@@ -6,6 +6,7 @@ use App\Domain\Characters\Progression\Data\CharacterExperienceProgress;
 use App\Domain\Characters\Progression\Data\CharacterProgressionResult;
 use App\Models\Character;
 use App\Models\CharacterLevelRequirement;
+use App\Models\CharacterProgressionSetting;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
@@ -18,7 +19,7 @@ final class CharacterProgressionService
 
         $level = (int) $character->level;
         $experience = (int) $character->experience;
-        $requirements = CharacterLevelRequirement::orderBy('level')->get();
+        $requirements = $this->activeRequirements();
         $this->validateCatalog($requirements);
 
         $current = $requirements->firstWhere('level', $level);
@@ -59,7 +60,7 @@ final class CharacterProgressionService
         if ($beforeExperience < 0 || $beforeLevel < 1) throw new RuntimeException('Invalid Character progression state.');
         if ($amount > PHP_INT_MAX - $beforeExperience) throw new InvalidArgumentException('Experience would exceed PHP_INT_MAX.');
         $afterExperience = $beforeExperience + $amount;
-        $requirements = CharacterLevelRequirement::orderBy('level')->get();
+        $requirements = $this->activeRequirements();
         $this->validateCatalog($requirements);
         $eligible = $requirements->filter(function ($requirement) use ($afterExperience) {
             return (int) $requirement->required_experience <= $afterExperience;
@@ -90,5 +91,15 @@ final class CharacterProgressionService
         if ((int) $requirements->first()->level !== 1 || (int) $requirements->first()->required_experience !== 0) {
             throw new RuntimeException('Character level catalog must start at level 1 with zero experience.');
         }
+    }
+
+    private function activeRequirements()
+    {
+        $setting=CharacterProgressionSetting::find(1);
+        if(!$setting||(int)$setting->max_character_level<1)throw new RuntimeException('Character progression setting is missing or invalid.');
+        $requirements=CharacterLevelRequirement::where('level','<=',(int)$setting->max_character_level)->orderBy('level')->get();
+        $this->validateCatalog($requirements);
+        if((int)$requirements->last()->level!==(int)$setting->max_character_level)throw new RuntimeException('Character progression curve does not reach the configured maximum level.');
+        return$requirements;
     }
 }

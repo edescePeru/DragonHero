@@ -65,6 +65,10 @@ El escenario se representa exclusivamente como el `MediaAsset` primario de tipo 
 
 Los archivos se almacenan en el disk `public` bajo una ruta generada por el servidor. PNG, JPG y WebP son válidos hasta 5 MB. 1920 × 1080 y 16:9 son recomendaciones visuales, no requisitos de proporción. Cacería automática y combate manual continúan consumiendo el mismo BACKGROUND primario y mantienen su fallback transparente cuando falta.
 
+# Media de NPC y Shop
+
+NPC y Shop usan aliases polimórficos estables `npc` y `shop`. El NPC consume `portrait`; la Shop puede consumir `banner` y `background`. Ninguna entidad guarda columnas de path o URL. Eliminar un tipo mediante `MediaAssetService` no afecta los otros tipos.
+
 # Banner de la Home
 
 `home_card_banner` es un recurso primario 1200 × 400 exclusivo de `GameHomeCard`. No se mezcla con iconos, retratos, cuerpos ni capas equipadas. Véase `docs/GAME_HOME_CARDS.md`.

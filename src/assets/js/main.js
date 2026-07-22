@@ -9,6 +9,7 @@ import './world-map-player.js';
 import './character-overview.js';
 import './catalog-image-preview.js';
 import './zone-background-preview.js';
+import './shop-purchase.js';
 
 
 // Import SCSS

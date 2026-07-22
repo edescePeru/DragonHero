@@ -6,6 +6,8 @@
 
 El namespace UUID v5 fijo de DragonHero es `8f4c1c72-7d7b-5d1a-9a4e-2d9c0f7b6a31`. Las entradas están versionadas: `legacy-item-instance:v1:{character_item_id}:{unit_index}` y `hunt-reward-claim:v1:{character_id}:{reward_ids_ordenados}`. La unicidad `(origin_type, origin_id, origin_unit_index)` es la protección económica primaria contra duplicación.
 
+Una compra crea objetos únicos exclusivamente mediante `ItemInstanceService::createFromShopPurchaseLocked()`. Usa origen `shop_purchase`, evento `created_from_shop_purchase` y UUID v5 `shop-purchase-item-instance:v1:{purchase_id}:{unit_index}`. Los replays de compra no vuelven a invocar esta creación.
+
 Los eventos son append-only por contrato de servicios y modelo. No son criptográficamente inmutables y Eloquent no protege contra Query Builder o SQL directo; la seguridad depende además de permisos limitados, ausencia de endpoints de edición, transacciones, locks y revisiones de integridad.
 
 El orden global de locks es Character, `character_items`, `item_instances`, rewards y líneas, catálogo, Wallet y progresión. Futuras transferencias, equipamiento y refinamiento deberán respetarlo.

@@ -1,0 +1,4 @@
+<?php
+namespace App\Domain\Admin\Content\Progression;
+use App\Models\Character;use App\Models\CharacterLevelRequirement;use App\Models\CharacterProgressionSetting;
+final class CharacterProgressionAdminReadService{public function viewModel(){$setting=CharacterProgressionSetting::with('administrator')->findOrFail(1);$previous=null;$rows=[];foreach(CharacterLevelRequirement::orderBy('level')->get()as$row){$level=(int)$row->level;$experience=(int)$row->required_experience;$rows[]=['level'=>$level,'required_experience'=>$experience,'experience_from_previous'=>$previous===null?null:$experience-$previous,'status'=>$level===(int)$setting->max_character_level?'maximum':($level<(int)$setting->max_character_level?'active':'future')];$previous=$experience;}return['setting'=>$setting,'highest_character_level'=>max(1,(int)Character::max('level')),'last_configured_level'=>(int)end($rows)['level'],'curve'=>$rows];}}

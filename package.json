@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build:vite": "vite build",
+    "publish:assets": "node scripts/publish-assets.mjs",
+    "build": "npm run build:vite && npm run publish:assets",
     "preview": "vite preview"
   },
   "keywords": [],

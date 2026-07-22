@@ -1,0 +1,3 @@
+<?php
+namespace App\Models;use Illuminate\Database\Eloquent\Factories\HasFactory;use Illuminate\Database\Eloquent\Model;
+class ShopOffer extends Model{use HasFactory;protected $guarded=[];protected $casts=['quantity'=>'integer','gold_price'=>'integer','stock_limit'=>'integer','stock_remaining'=>'integer','purchase_limit_per_character'=>'integer','required_character_level'=>'integer','starts_at'=>'immutable_datetime','ends_at'=>'immutable_datetime','sort_order'=>'integer'];public function shop(){return$this->belongsTo(Shop::class);}public function item(){return$this->belongsTo(Item::class);}public function purchases(){return$this->hasMany(ShopPurchase::class);}}

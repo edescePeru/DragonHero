@@ -110,8 +110,8 @@ class CharacterOverviewTest extends TestCase
         $queryCount = count(DB::getQueryLog());
         DB::disableQueryLog();
 
-        // La composición añade una consulta acotada para asociaciones visuales, nunca una por Item.
-        $this->assertLessThanOrEqual(26, $queryCount, 'La vista compacta ejecutó demasiadas consultas: '.$queryCount);
+        // La composición añade consultas acotadas para asociaciones visuales y el cap global, nunca una por Item.
+        $this->assertLessThanOrEqual(27, $queryCount, 'La vista compacta ejecutó demasiadas consultas: '.$queryCount);
     }
 
     public function test_visual_inventory_expands_aggregated_quantity_without_changing_textual_summary()

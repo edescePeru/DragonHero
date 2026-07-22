@@ -1,0 +1,6 @@
+<?php
+namespace Tests\Feature;
+use App\Domain\Shops\ShopLocationType;use App\Models\Character;use App\Models\Shop;use App\Models\ShopLocation;use App\Models\User;use App\Models\Zone;use Database\Seeders\WorldCatalogSeeder;use Illuminate\Foundation\Testing\RefreshDatabase;use Tests\TestCase;
+final class ZoneShopCatalogTest extends TestCase{use RefreshDatabase;
+ public function test_zone_lists_only_available_localized_shops_without_loading_offer_catalog(){$this->seed(WorldCatalogSeeder::class);$zone=Zone::where('code','grey_oak_forest')->firstOrFail();$character=Character::factory()->selectedFor($user=User::factory()->create())->create();$shop=Shop::factory()->create(['name'=>'Mercado del bosque']);ShopLocation::create(['shop_id'=>$shop->id,'locatable_type'=>ShopLocationType::ZONE,'locatable_id'=>$zone->id,'status'=>'active','sort_order'=>0]);$hidden=Shop::factory()->create(['name'=>'Mercado oculto','status'=>'hidden']);ShopLocation::create(['shop_id'=>$hidden->id,'locatable_type'=>ShopLocationType::ZONE,'locatable_id'=>$zone->id,'status'=>'active','sort_order'=>0]);$this->actingAs($user)->get(route('zones.show',$zone))->assertOk()->assertSee('Tiendas disponibles')->assertSee('Mercado del bosque')->assertSee(route('characters.shops.show',[$character,$shop,'zone'=>$zone->id]),false)->assertDontSee('Mercado oculto');}
+}

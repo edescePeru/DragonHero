@@ -1,0 +1,3 @@
+<?php
+namespace App\Http\Requests\Admin\Content;use App\Domain\WorldCatalog\CatalogStatus;use Illuminate\Foundation\Http\FormRequest;use Illuminate\Validation\Rule;
+final class NpcRequest extends FormRequest{public function authorize(){return true;}public function rules(){$npc=$this->route('npc');return['code'=>['required','string','max:64',Rule::unique('npcs','code')->ignore($npc?$npc->id:null)],'name'=>'required|string|max:255','greeting'=>'nullable|string|max:500','status'=>['required',Rule::in(CatalogStatus::values())],'npc_portrait'=>'nullable|file|max:5120|mimetypes:image/png,image/jpeg,image/webp','remove_npc_portrait'=>'nullable|boolean'];}}

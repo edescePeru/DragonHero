@@ -38,6 +38,8 @@ Las reglas de límite de tres, selector, personaje activo, nombre canónico, leg
 
 La experiencia del personaje es acumulada. `CharacterProgressionService` interpreta el catálogo de `CharacterLevelRequirement` tanto para conceder experiencia como para preparar el progreso visual, sin recalcular ni modificar el nivel durante una lectura. `CharacterExperienceProgress` entrega a la vista el requisito actual, el siguiente umbral, la experiencia ganada y faltante dentro del tramo y el porcentaje redondeado a dos decimales.
 
+El nivel máximo activo se obtiene de la fila global tipada `character_progression_settings`; nunca pertenece al Character. La curva conserva umbrales acumulados continuos desde nivel 1 con 0 EXP. Las filas sobre el cap quedan preparadas para futuras ampliaciones y no son alcanzables. El mantenedor permite agregar niveles consecutivos sin elevar automáticamente el cap y retirar únicamente niveles finales preparados, nunca niveles activos o usados por personajes. Al llegar al cap, la EXP continúa acumulándose sin otorgar niveles superiores. El mantenedor `admin.content.progression.*` aplica altas, cambios y bajas finales de forma atómica, usa versión optimista y registra snapshots completos en `character_progression_revisions` con administrador y motivo.
+
 La ficha no consulta el catálogo ni calcula porcentajes. Cuando no existe un nivel siguiente configurado, presenta el nivel máximo disponible y una barra completa; la experiencia acumulada puede continuar por encima del último umbral.
 
 La ficha recibe también un snapshot controlado de los ocho slots de equipamiento. El equipo todavía no altera estadísticas efectivas; esa integración será un incremento independiente.

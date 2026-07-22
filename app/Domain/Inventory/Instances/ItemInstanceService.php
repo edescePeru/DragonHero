@@ -9,6 +9,7 @@ use App\Models\HuntRewardItem;
 use App\Models\Item;
 use App\Models\ItemInstance;
 use App\Models\ItemInstanceEvent;
+use App\Models\ShopPurchase;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,47 @@ final class ItemInstanceService
     public function createFromCombatRewardLocked(Character $character, CombatPendingRewardItem $line, Item $item, string $operationUuid, CarbonImmutable $now): Collection
     {
         return $this->createLocked($character, $line, $item, $operationUuid, $now, ItemInstanceOriginType::COMBAT_PENDING_REWARD_ITEM, ItemInstanceEventType::CREATED_FROM_COMBAT_REWARD, 'combat-reward-item-instance:v1:');
+    }
+
+    public function createFromShopPurchaseLocked(Character $character, Item $item, ShopPurchase $purchase, int $quantity, CarbonImmutable $now): Collection
+    {
+        if (DB::transactionLevel() < 1) throw new RuntimeException('Active transaction required.');
+        if ((int) $purchase->character_id !== (int) $character->id || (int) $purchase->item_id !== (int) $item->id || $this->classification->classify($item) !== ItemClassification::UNIQUE) throw new InvalidArgumentException('ShopPurchase requires a coherent unique Item.');
+        $quantity = $this->positive($quantity);
+        $operationUuid = $purchase->idempotency_key;
+        $results = collect();
+        for ($unit = 1; $unit <= $quantity; $unit++) {
+            $instance = ItemInstance::create([
+                'uuid' => DragonHeroUuid::versionFive('shop-purchase-item-instance:v1:'.$purchase->id.':'.$unit),
+                'character_id' => $character->id,
+                'item_id' => $item->id,
+                'refinement_level' => 0,
+                'status' => ItemInstanceStatus::AVAILABLE,
+                'origin_type' => ItemInstanceOriginType::SHOP_PURCHASE,
+                'origin_id' => $purchase->id,
+                'origin_unit_index' => $unit,
+                'acquired_at' => $now,
+            ]);
+            ItemInstanceEvent::create([
+                'item_instance_id' => $instance->id,
+                'operation_uuid' => $operationUuid,
+                'event_type' => ItemInstanceEventType::CREATED_FROM_SHOP_PURCHASE,
+                'actor_character_id' => $character->id,
+                'from_character_id' => null,
+                'to_character_id' => $character->id,
+                'from_item_id' => null,
+                'to_item_id' => $item->id,
+                'refinement_before' => null,
+                'refinement_after' => 0,
+                'source_type' => ItemInstanceOriginType::SHOP_PURCHASE,
+                'source_id' => $purchase->id,
+                'metadata' => null,
+                'occurred_at' => $now,
+                'created_at' => $now,
+            ]);
+            $results->push($this->entry($instance, $item));
+        }
+        return $results;
     }
 
     private function createLocked(Character $character, $line, Item $item, string $operationUuid, CarbonImmutable $now, $originType, $eventType, $uuidPrefix)

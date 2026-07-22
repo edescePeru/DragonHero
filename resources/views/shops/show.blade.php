@@ -1,0 +1,36 @@
+@extends('layouts.game')
+@section('title',$shop['name'])
+@php($breadcrumbs=[['label'=>'Inicio','url'=>route('dashboard')],['label'=>$shop['name'],'url'=>null]])
+@push('styles')
+<style>
+.shop-hero{background-size:cover;background-position:center;min-height:220px;position:relative}.shop-hero:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(12,18,28,.92),rgba(12,18,28,.35))}.shop-hero__content{position:relative;z-index:1;color:#fff}.shop-npc{width:112px;height:112px;object-fit:cover}.shop-offer-icon{width:88px;height:88px;object-fit:contain}.shop-offer[hidden]{display:none!important}.shop-banner{max-height:160px;object-fit:cover;width:100%}
+</style>
+@endpush
+@section('content')
+<div data-shop-catalog data-csrf-token="{{ csrf_token() }}" data-current-gold="{{ $gold }}" data-inventory-used="{{ $inventory['used'] }}" data-inventory-capacity="{{ $inventory['capacity'] }}">
+ <a class="btn btn-sm btn-outline-secondary mb-3" href="{{ $return_url }}">← Regresar</a>
+ <header class="shop-hero rounded overflow-hidden mb-4 p-4 d-flex align-items-end" @if($shop['background_url']) style="background-image:url('{{ $shop['background_url'] }}')" @endif>
+  <div class="shop-hero__content d-flex flex-column flex-md-row gap-4 align-items-md-end w-100">
+   @if($npc['portrait_url'])<img class="shop-npc rounded border border-3 border-light" src="{{ $npc['portrait_url'] }}" alt="Retrato de {{ $npc['name'] }}">@else<div class="shop-npc rounded border border-3 border-light bg-secondary d-flex align-items-center justify-content-center" aria-label="Retrato no disponible"><i class="ti ti-user fs-1"></i></div>@endif
+   <div class="flex-grow-1"><p class="text-uppercase small mb-1">{{ $npc['name'] }}</p><h1 class="h2 text-white">{{ $shop['name'] }}</h1><p class="mb-1">{{ $npc['greeting'] ?: 'Bienvenido, viajero.' }}</p><p class="mb-0">{{ $shop['description'] }}</p></div>
+  </div>
+ </header>
+ @if($shop['banner_url'])<img class="shop-banner rounded mb-4" src="{{ $shop['banner_url'] }}" alt="Banner de {{ $shop['name'] }}">@endif
+ <div class="row g-3 mb-4"><div class="col-md-4"><div class="card h-100"><div class="card-body"><small>Personaje</small><strong class="d-block">{{ $character->name }} · Nivel {{ $character->level }}</strong></div></div></div><div class="col-md-4"><div class="card h-100"><div class="card-body"><small>Oro disponible</small><strong class="d-block" data-shop-gold>{{ $gold }}</strong></div></div></div><div class="col-md-4"><div class="card h-100"><div class="card-body"><small>Inventario</small><strong class="d-block"><span data-shop-slots-used>{{ $inventory['used'] }}</span> / <span data-shop-slots-capacity>{{ $inventory['capacity'] }}</span> slots</strong><a href="{{ route('characters.inventory.index',$character) }}">Ver inventario</a></div></div></div></div>
+ <div class="card mb-4"><div class="card-body"><div class="row g-3 align-items-end"><div class="col-lg-7"><label class="form-label" for="shop-search">Buscar por nombre o código</label><input id="shop-search" data-shop-search class="form-control" type="search" autocomplete="off"></div><div class="col-lg-5"><div class="d-flex flex-wrap gap-2" role="group" aria-label="Filtrar ofertas"><button type="button" class="btn btn-sm btn-primary" data-shop-category="all">Todas</button>@foreach($categories as $value=>$label)<button type="button" class="btn btn-sm btn-outline-primary" data-shop-category="{{ $value }}">{{ $label }}</button>@endforeach</div></div></div></div></div>
+ <div class="alert d-none" role="status" aria-live="polite" data-shop-feedback></div>
+ <div class="row g-3" data-shop-offers>
+ @forelse($offers as $offer)
+  <div class="col-md-6 col-xl-4 shop-offer" data-shop-offer data-category="{{ $offer['category'] }}" data-search="{{ $offer['search_text'] }}" data-offer-id="{{ $offer['id'] }}" data-price="{{ $offer['gold_price'] }}" data-additional-slots="{{ $offer['additional_slots'] === null ? '' : $offer['additional_slots'] }}" data-purchase-limit="{{ $offer['purchase_limit'] === null ? '' : $offer['purchase_limit'] }}">
+   <article class="card h-100"><div class="card-body d-flex flex-column">
+    <div class="d-flex gap-3">@if($offer['icon_url'])<img class="shop-offer-icon" src="{{ $offer['icon_url'] }}" alt="Icono de {{ $offer['item_name'] }}">@else<div class="shop-offer-icon bg-light border rounded d-flex align-items-center justify-content-center" aria-label="Icono no disponible"><i class="ti ti-package fs-2"></i></div>@endif<div><h2 class="h5 mb-1">{{ $offer['item_name'] }}</h2><span class="badge bg-light text-dark">{{ $offer['category_label'] }}</span> <span class="badge bg-secondary">{{ $offer['rarity'] }}</span><div class="small text-secondary mt-1">{{ $offer['item_code'] }}</div></div></div>
+    <dl class="row small mt-3 mb-3"><dt class="col-7">Cantidad</dt><dd class="col-5 text-end">{{ $offer['quantity'] }}</dd><dt class="col-7">{{ $offer['quantity']>1?'Precio del paquete':'Precio' }}</dt><dd class="col-5 text-end">{{ $offer['gold_price'] }} oro</dd><dt class="col-7">Stock</dt><dd class="col-5 text-end" data-offer-stock>{{ $offer['stock_remaining']===null?'Ilimitado':($offer['stock_remaining']===0?'Agotado':$offer['stock_remaining'].' disponibles') }}</dd>@if($offer['purchase_limit']!==null)<dt class="col-7">Límite personal</dt><dd class="col-5 text-end"><span data-offer-count>{{ $offer['purchase_count'] }}</span>/{{ $offer['purchase_limit'] }}</dd>@endif @if($offer['required_level']!==null)<dt class="col-7">Nivel de oferta</dt><dd class="col-5 text-end">{{ $offer['required_level'] }}</dd>@endif @if($offer['item_required_level']>1)<dt class="col-7">Nivel de equipamiento</dt><dd class="col-5 text-end">{{ $offer['item_required_level'] }}</dd>@endif</dl>
+    <div class="mt-auto"><span class="badge {{ $offer['purchasable']?'bg-success':'bg-secondary' }}" data-offer-state>{{ $offer['status_label'] }}</span>@if($offer['reason'])<p class="small text-secondary mt-2 mb-2" data-offer-reason>{{ $offer['reason'] }}</p>@endif<button type="button" class="btn btn-primary w-100 mt-2" data-shop-buy data-purchase-url="{{ $offer['purchase_url'] }}" data-item-name="{{ $offer['item_name'] }}" data-quantity="{{ $offer['quantity'] }}" data-price="{{ $offer['gold_price'] }}" @if(!$offer['purchasable']) disabled @endif>Comprar</button></div>
+   </div></article>
+  </div>
+ @empty<div class="col-12"><div class="alert alert-secondary">Esta tienda no tiene ofertas visibles.</div></div>@endforelse
+ </div>
+ <p class="text-secondary d-none mt-4" data-shop-empty>No hay ofertas que coincidan con el filtro.</p>
+ <div class="modal fade" id="shop-purchase-modal" tabindex="-1" aria-labelledby="shop-purchase-title" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title h5" id="shop-purchase-title">Confirmar compra</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div><div class="modal-body" data-shop-confirmation></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-primary" data-shop-confirm>Confirmar compra</button></div></div></div></div>
+</div>
+@endsection

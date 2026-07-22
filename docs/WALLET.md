@@ -8,6 +8,8 @@ MySQL 5.7 no aplica realmente restricciones `CHECK`. Por ello `amount > 0` se pr
 
 Los claims de cacería usan `creditLocked()` dentro de la transacción autoritativa ya abierta. Todo el oro de las recompensas pendientes se agrega en un único crédito con razón `hunting_reward`; no se crea un movimiento por objeto ni por enemigo.
 
+Las compras usan exclusivamente `debitLocked()` con razón `shop_purchase`, referencia `shop_purchase:{id}` y el mismo UUID idempotente de `ShopPurchase`. Capacidad, stock y límite se validan antes del débito. El ledger, saldo y entrega forman una única transacción.
+
 El ledger no se edita ni elimina. Su FK usa RESTRICT: un personaje con movimientos no puede borrarse físicamente y deberá archivarse o adoptar soft deletes en el futuro. Las referencias permitirán vincular movimientos con cacerías, misiones, tiendas, crafteo y comercio sin implementar todavía esos sistemas.
 # Refinamiento
 

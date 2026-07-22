@@ -22,6 +22,8 @@ use App\Http\Controllers\CharacterEquipmentController;
 use App\Http\Controllers\CharacterItemRefinementController;
 use App\Http\Controllers\CharacterOverviewController;
 use App\Http\Controllers\ManualCombatController;
+use App\Http\Controllers\ShopPurchaseController;
+use App\Http\Controllers\ShopController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Content\ItemController as AdminItemController;
 use App\Http\Controllers\Admin\Content\MonsterController as AdminMonsterController;
@@ -37,6 +39,10 @@ use App\Http\Controllers\Admin\Content\GameHomeCardController as AdminGameHomeCa
 use App\Http\Controllers\Admin\Content\ItemVisualAssetController as AdminItemVisualAssetController;
 use App\Http\Controllers\Admin\Content\RegionController as AdminRegionController;
 use App\Http\Controllers\Admin\Content\WorldController as AdminWorldController;
+use App\Http\Controllers\Admin\Content\CharacterProgressionController as AdminCharacterProgressionController;
+use App\Http\Controllers\Admin\Content\NpcController as AdminNpcController;
+use App\Http\Controllers\Admin\Content\ShopController as AdminShopController;
+use App\Http\Controllers\Admin\Content\ShopOfferController as AdminShopOfferController;
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', ShowLoginController::class)->name('login');
@@ -73,6 +79,8 @@ Route::middleware(['auth', 'game.navigation'])->group(function () {
     Route::post('/characters/{character}/equipment/equip', [CharacterEquipmentController::class, 'equip'])->name('characters.equipment.equip');
     Route::post('/characters/{character}/equipment/unequip', [CharacterEquipmentController::class, 'unequip'])->name('characters.equipment.unequip');
     Route::post('/characters/{character}/item-instances/{itemInstance}/refine', CharacterItemRefinementController::class)->name('characters.item-instances.refine');
+    Route::post('/characters/{character}/shops/{shop}/offers/{offer}/purchases', [ShopPurchaseController::class, 'store'])->name('characters.shops.offers.purchases.store');
+    Route::get('/characters/{character}/shops/{shop}', [ShopController::class, 'show'])->name('characters.shops.show');
     });
 
     Route::get('/', GameHomeController::class)
@@ -98,6 +106,20 @@ Route::middleware(['auth', 'game.navigation', 'character.required'])->group(func
 });
 
 Route::prefix('admin/content')->name('admin.content.')->middleware(['auth','game.navigation','content.admin'])->group(function(){
+    Route::patch('npcs/{npc}/activate',[AdminNpcController::class,'activate'])->name('npcs.activate');
+    Route::patch('npcs/{npc}/deactivate',[AdminNpcController::class,'deactivate'])->name('npcs.deactivate');
+    Route::resource('npcs',AdminNpcController::class)->only(['index','create','store','edit','update']);
+    Route::get('shops/items/search',[AdminShopOfferController::class,'search'])->name('shops.items.search');
+    Route::patch('shops/{shop}/activate',[AdminShopController::class,'activate'])->name('shops.activate');
+    Route::patch('shops/{shop}/deactivate',[AdminShopController::class,'deactivate'])->name('shops.deactivate');
+    Route::patch('shops/{shop}/hide',[AdminShopController::class,'hide'])->name('shops.hide');
+    Route::resource('shops',AdminShopController::class)->only(['index','create','store','edit','update']);
+    Route::post('shops/{shop}/offers',[AdminShopOfferController::class,'store'])->name('shops.offers.store');
+    Route::put('shops/{shop}/offers/{offer}',[AdminShopOfferController::class,'update'])->name('shops.offers.update');
+    Route::patch('shops/{shop}/offers/{offer}/activate',[AdminShopOfferController::class,'activate'])->name('shops.offers.activate');
+    Route::patch('shops/{shop}/offers/{offer}/deactivate',[AdminShopOfferController::class,'deactivate'])->name('shops.offers.deactivate');
+    Route::get('progression',[AdminCharacterProgressionController::class,'index'])->name('progression.index');
+    Route::put('progression',[AdminCharacterProgressionController::class,'update'])->name('progression.update');
     Route::get('worlds/{world}/regions', [AdminRegionController::class, 'index'])->name('worlds.regions.index');
     Route::get('worlds/{world}/regions/create', [AdminRegionController::class, 'create'])->name('worlds.regions.create');
     Route::post('worlds/{world}/regions', [AdminRegionController::class, 'store'])->name('worlds.regions.store');

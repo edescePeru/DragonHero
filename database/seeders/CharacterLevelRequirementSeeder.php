@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\CharacterLevelRequirement;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Seeder;
 
 class CharacterLevelRequirementSeeder extends Seeder
@@ -15,5 +16,6 @@ class CharacterLevelRequirementSeeder extends Seeder
                 ['required_experience' => $experience]
             );
         }
+        DB::table('character_progression_settings')->where('id',1)->where('version',1)->whereNull('updated_by')->where('max_character_level','<',5)->update(['max_character_level'=>5,'updated_at'=>now()]);
     }
 }

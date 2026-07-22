@@ -11,6 +11,22 @@
  <div class="col-md-6"><div class="card h-100"><div class="card-body"><h2 class="h5">Combate manual</h2><p class="text-secondary">Elige objetivos y ejecuta las acciones de tu personaje.</p><form method="POST" action="{{ route('characters.manual-combats.zones.store',[$navigationCharacter,$zone]) }}" onsubmit="this.querySelector('button').disabled=true">@csrf<button class="btn btn-primary">Combate manual</button></form></div></div></div>
 </div>
 @endif
+@if(count($shops)>0)
+<section class="mb-4" aria-labelledby="zone-shops-title">
+ <h2 id="zone-shops-title" class="h4 mb-3">Tiendas disponibles</h2>
+ <div class="row g-3">
+ @foreach($shops as $availableShop)
+  <div class="col-md-6 col-xl-4"><article class="card h-100 overflow-hidden">
+   @if($availableShop['banner_url'])<img src="{{ $availableShop['banner_url'] }}" class="card-img-top" style="height:130px;object-fit:cover" alt="Banner de {{ $availableShop['name'] }}">@endif
+   <div class="card-body d-flex flex-column"><div class="d-flex gap-3 align-items-center mb-3">
+    @if($availableShop['portrait_url'])<img src="{{ $availableShop['portrait_url'] }}" width="56" height="56" class="rounded-circle object-fit-cover" alt="Retrato de {{ $availableShop['npc_name'] }}">@else<div class="rounded-circle bg-light border d-flex align-items-center justify-content-center" style="width:56px;height:56px" aria-hidden="true"><i class="ti ti-user"></i></div>@endif
+    <div><h3 class="h5 mb-0">{{ $availableShop['name'] }}</h3><small class="text-secondary">{{ $availableShop['npc_name'] }}</small></div>
+   </div><p class="text-secondary flex-grow-1">{{ $availableShop['description'] ?: 'Comerciante disponible en esta zona.' }}</p><p class="small">{{ $availableShop['offers_count'] }} ofertas visibles</p><a class="btn btn-primary" href="{{ $availableShop['url'] }}">Visitar tienda</a></div>
+  </article></div>
+ @endforeach
+ </div>
+</section>
+@endif
 <div class="row g-3">
  <div class="col-lg-6"><div class="card"><div class="card-header">Conexiones disponibles</div><ul class="list-group list-group-flush">
  @foreach($zone->outgoingConnections as $connection)@if($connection->toZone)<li class="list-group-item"><a href="{{ route('zones.show',$connection->toZone) }}">{{ $connection->toZone->name }}</a></li>@endif @endforeach

@@ -12,6 +12,8 @@ Las filas con total cero se eliminan para conservar una representación única y
 
 Todas las escrituras usan transacciones, bloqueo de la fila del personaje y `lockForUpdate` sobre catálogo e inventario. Solo se permiten items `active` y apilables. La base impide duplicados por personaje/item.
 
+Las compras entregan apilables mediante `InventoryService::addManyLocked()` y objetos únicos mediante `ItemInstanceService`; nunca actualizan `character_items.quantity` ni crean ItemInstances directamente desde el servicio de Shop.
+
 La FK de item usa RESTRICT: un item referenciado no puede eliminarse físicamente. Los items dejan de utilizarse marcándolos `inactive` o `hidden`.
 
 ## Alcance futuro
