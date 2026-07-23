@@ -153,7 +153,7 @@ final class CharacterOverviewService
         return array_merge($entry, [
             'icon_url' => $this->iconUrl($item, 64),
             'detail_icon_url' => $this->iconUrl($item, 128),
-            'details' => $this->itemDetails($item, $entry['refinement_level'], $entry['total_bonuses']),
+            'details' => $this->itemDetails($item, $entry['refinement_level'], $entry['total_bonuses'], isset($entry['rarity_name']) ? $entry['rarity_name'] : null),
             'unequip_url' => route('characters.equipment.unequip', $character),
         ]);
     }
@@ -193,6 +193,13 @@ final class CharacterOverviewService
             ];
         }
 
+        $rarityName = isset($entry['rarity_name']) && trim((string) $entry['rarity_name']) !== ''
+            ? $entry['rarity_name']
+            : 'Sin rareza';
+        $rarityVisualStyle = isset($entry['rarity_visual_style'])
+            ? $entry['rarity_visual_style']
+            : 'neutral';
+
         return [
             'kind' => 'instance',
             'name' => $entry['item_name'],
@@ -201,12 +208,25 @@ final class CharacterOverviewService
             'quantity' => 1,
             'locked_quantity' => 0,
             'instance_uuid' => $entry['uuid'],
-            'details' => $this->itemDetails($item, $entry['refinement_level'], $entry['bonuses']),
+            'public_reference' => $entry['public_reference'],
+            'rarity_id' => $entry['rarity_id'],
+            'rarity_code' => $entry['rarity_code'],
+            'rarity_name' => $rarityName,
+            'rarity_visual_style' => $rarityVisualStyle,
+            'rarity_container_class' => $this->rarityContainerClass($rarityVisualStyle),
+            'rarity_visual' => isset($entry['rarity_visual']) ? $entry['rarity_visual'] : [],
+            'css_variables' => isset($entry['css_variables']) ? $entry['css_variables'] : [],
+            'rarity_visual_style_attribute' => isset($entry['rarity_visual_style_attribute']) ? $entry['rarity_visual_style_attribute'] : '',
+            'base_bonuses' => isset($entry['base_bonuses']) ? $entry['base_bonuses'] : [],
+            'refinement_bonuses' => isset($entry['refinement_bonuses']) ? $entry['refinement_bonuses'] : [],
+            'rarity_bonuses' => isset($entry['rarity_bonuses']) ? $entry['rarity_bonuses'] : [],
+            'total_bonuses' => isset($entry['total_bonuses']) ? $entry['total_bonuses'] : $entry['bonuses'],
+            'details' => $this->itemDetails($item, $entry['refinement_level'], isset($entry['total_bonuses']) ? $entry['total_bonuses'] : $entry['bonuses'], $rarityName),
             'equip_options' => $options,
         ];
     }
 
-    private function itemDetails($item, $refinementLevel, array $bonuses): array
+    private function itemDetails($item, $refinementLevel, array $bonuses, $instanceRarityName = null): array
     {
         if (!$item) {
             return ['Información del objeto no disponible'];
@@ -214,7 +234,7 @@ final class CharacterOverviewService
 
         $details = [
             'Tipo: '.($item->item_type ?: 'Sin tipo'),
-            'Rareza: '.($item->rarity ?: 'Sin rareza'),
+            'Rareza: '.($instanceRarityName !== null ? $instanceRarityName : ($item->rarity ?: 'Sin rareza')),
         ];
         if ($item->description) {
             $details[] = 'Descripción: '.$item->description;
@@ -230,10 +250,18 @@ final class CharacterOverviewService
         }
         foreach ($this->bonusLabels() as $key => $label) {
             if (isset($bonuses[$key]) && (float) $bonuses[$key] != 0.0) {
-                $details[] = $label.': +'.$bonuses[$key];
+                $details[] = $label.': +'.$this->formatBonus($key, $bonuses[$key]);
             }
         }
         return $details;
+    }
+
+    private function rarityContainerClass($visualStyle): string
+    {
+        $allowed = ['neutral', 'blue', 'purple', 'gold'];
+        $safeStyle = in_array($visualStyle, $allowed, true) ? $visualStyle : 'neutral';
+
+        return 'overview-inventory-slot--rarity-'.$safeStyle;
     }
 
     private function iconUrl($item, $size)
@@ -263,7 +291,22 @@ final class CharacterOverviewService
 
     private function bonusLabels(): array
     {
-        return ['max_health' => 'Vida', 'attack' => 'Ataque', 'defense' => 'Defensa', 'accuracy' => 'Precisión', 'evasion' => 'Evasión', 'critical_chance' => 'Crítico', 'attack_speed' => 'Velocidad de ataque'];
+        return ['max_health' => 'Vida máxima', 'attack' => 'Ataque', 'defense' => 'Defensa', 'accuracy' => 'Precisión', 'evasion' => 'Evasión', 'critical_chance' => 'Crítico', 'attack_speed' => 'Velocidad', 'absorb_damage_basis_points' => 'AbsorbDamage'];
+    }
+
+    private function formatBonus($key, $value): string
+    {
+        if (in_array($key, ['accuracy', 'evasion'], true)) {
+            return (int) $value.' %';
+        }
+        if (in_array($key, ['critical_chance', 'attack_speed'], true)) {
+            return sprintf('%.2f', (float) $value).($key === 'critical_chance' ? ' %' : '');
+        }
+        if ($key === 'absorb_damage_basis_points') {
+            $basisPoints = (int) $value;
+            return intdiv($basisPoints, 100).'.'.str_pad((string) ($basisPoints % 100), 2, '0', STR_PAD_LEFT).' %';
+        }
+        return (string) $value;
     }
 
     private function slotLabel(string $slot): string

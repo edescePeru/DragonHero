@@ -43,7 +43,7 @@ class HuntingSessionVisualUpdateTest extends TestCase
 
     public function test_victory_returns_matching_processed_hunt_reward_and_fresh_summary()
     {
-        MonsterLootEntry::query()->update(['drop_chance_basis_points'=>10000,'minimum_quantity'=>1,'maximum_quantity'=>1]);
+        MonsterLootEntry::query()->update(['drop_probability_ppm'=>1000000,'minimum_quantity'=>1,'maximum_quantity'=>1]);
         $character=$this->player();$service=app(HuntingSessionService::class);$session=HuntingSession::find($service->start($character,$this->zone())->id());
         $tick=$service->tick($character,$session)->toArray();
         $this->assertSame(CombatResultStatus::CHARACTER_VICTORY,$tick['processed_hunt']['status']);
@@ -63,7 +63,7 @@ class HuntingSessionVisualUpdateTest extends TestCase
 
     public function test_empty_reward_is_returned_immediately_and_not_duplicated()
     {
-        MonsterLootEntry::query()->update(['drop_chance_basis_points'=>1]);$character=$this->player();$service=app(HuntingSessionService::class);$session=HuntingSession::find($service->start($character,$this->zone())->id());$first=$service->tick($character,$session)->toArray();
+        MonsterLootEntry::query()->update(['drop_probability_ppm'=>1]);$character=$this->player();$service=app(HuntingSessionService::class);$session=HuntingSession::find($service->start($character,$this->zone())->id());$first=$service->tick($character,$session)->toArray();
         $this->assertSame(0,$first['generated_reward']['item_lines_count']);$this->assertSame([],$first['generated_reward']['items']);$this->assertSame(1,$first['character_pending_rewards_summary']['rewards_count']);
         $second=$service->tick($character,$session)->toArray();$this->assertNull($second['processed_hunt']);$this->assertNull($second['generated_reward']);$this->assertSame(1,HuntReward::count());
     }
@@ -108,7 +108,7 @@ class HuntingSessionVisualUpdateTest extends TestCase
 
     public function test_victory_reward_remains_in_response_when_capacity_stops_same_tick()
     {
-        MonsterLootEntry::query()->update(['drop_chance_basis_points'=>10000,'minimum_quantity'=>1,'maximum_quantity'=>1]);
+        MonsterLootEntry::query()->update(['drop_probability_ppm'=>1000000,'minimum_quantity'=>1,'maximum_quantity'=>1]);
         $character=$this->player();
         $single=Item::create(['code'=>'capacity_marker','name'=>'Capacity marker','item_type'=>'material','rarity'=>'common','is_stackable'=>true,'max_stack'=>2,'status'=>'active']);
         CharacterItem::create(['character_id'=>$character->id,'item_id'=>$single->id,'quantity'=>49,'locked_quantity'=>0]);

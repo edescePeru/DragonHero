@@ -1,4 +1,47 @@
 <?php
+
 namespace Tests\Feature;
-use App\Domain\Equipment\CharacterEquipmentService;use App\Domain\Hunts\HuntService;use App\Models\Character;use App\Models\Hunt;use App\Models\Item;use App\Models\ItemInstance;use App\Models\User;use App\Models\Zone;use Database\Seeders\WorldCatalogSeeder;use Illuminate\Foundation\Testing\RefreshDatabase;use Illuminate\Support\Str;use Tests\TestCase;
-class HuntEquipmentStatsTest extends TestCase{use RefreshDatabase;public function test_each_new_hunt_snapshots_confirmed_equipment_without_changing_history(){$this->seed(WorldCatalogSeeder::class);$character=Character::factory()->for(User::factory())->create(['base_attack'=>10]);$zone=Zone::where('code','grey_oak_forest')->firstOrFail();$first=app(HuntService::class)->start($character,$zone);$firstSnapshot=Hunt::findOrFail($first->huntId())->character_stats_snapshot;$item=Item::create(['code'=>'hunt_stats_weapon','name'=>'Arma de caceria','item_type'=>'equipment','equipment_type'=>'weapon','rarity'=>'common','is_stackable'=>false,'max_stack'=>1,'status'=>'active','attack_bonus'=>20]);$instance=ItemInstance::create(['uuid'=>(string)Str::uuid(),'character_id'=>$character->id,'item_id'=>$item->id,'refinement_level'=>9,'status'=>'available','origin_type'=>'legacy_inventory','origin_id'=>987654,'origin_unit_index'=>1,'acquired_at'=>now()]);app(CharacterEquipmentService::class)->equip($character,$instance->uuid,'main_hand');$second=app(HuntService::class)->start($character,$zone);$secondSnapshot=Hunt::findOrFail($second->huntId())->character_stats_snapshot;$this->assertSame(2,$firstSnapshot['schema_version']);$this->assertSame(10,$firstSnapshot['effective']['attack']);$this->assertSame([],$firstSnapshot['equipment_sources']);$this->assertSame(30,$secondSnapshot['effective']['attack']);$this->assertSame($instance->uuid,$secondSnapshot['equipment_sources'][0]['item_instance_uuid']);$this->assertSame(9,$secondSnapshot['equipment_sources'][0]['refinement_level']);$this->assertSame(20,$secondSnapshot['equipment_sources'][0]['bonuses']['attack']);$this->assertArrayHasKey('equipment_base',$secondSnapshot);$this->assertArrayHasKey('refinement',$secondSnapshot);$this->assertSame($firstSnapshot,Hunt::findOrFail($first->huntId())->character_stats_snapshot);$v1=['schema_version'=>1,'base'=>[],'equipment'=>[],'effective'=>[],'equipment_sources'=>[]];$this->assertTrue(\App\Domain\Characters\Data\CharacterStatsBreakdown::supportsSnapshot($v1));$this->assertTrue(\App\Domain\Characters\Data\CharacterStatsBreakdown::supportsSnapshot($secondSnapshot));}}
+
+use App\Domain\Equipment\CharacterEquipmentService;
+use App\Domain\Hunts\HuntService;
+use App\Models\Character;
+use App\Models\Hunt;
+use App\Models\Item;
+use App\Models\ItemInstance;
+use App\Models\User;
+use App\Models\Zone;
+use Database\Seeders\WorldCatalogSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
+use Tests\TestCase;
+class HuntEquipmentStatsTest extends TestCase
+{
+    use RefreshDatabase;
+    public function test_each_new_hunt_snapshots_confirmed_equipment_without_changing_history()
+    {
+        $this->seed(WorldCatalogSeeder::class);
+        $character = Character::factory()->for(User::factory())->create(['base_attack' => 10]);
+        $zone = Zone::where('code', 'grey_oak_forest')->firstOrFail();
+        $first = app(HuntService::class)->start($character, $zone);
+        $firstSnapshot = Hunt::findOrFail($first->huntId())->character_stats_snapshot;
+        $item = Item::create(['code' => 'hunt_stats_weapon', 'name' => 'Arma de caceria', 'item_type' => 'equipment', 'equipment_type' => 'weapon', 'rarity' => 'common', 'is_stackable' => false, 'max_stack' => 1, 'status' => 'active', 'attack_bonus' => 20]);
+        $instance = ItemInstance::create(['uuid' => (string) Str::uuid(), 'character_id' => $character->id, 'item_id' => $item->id, 'refinement_level' => 9, 'status' => 'available', 'origin_type' => 'legacy_inventory', 'origin_id' => 987654, 'origin_unit_index' => 1, 'acquired_at' => now()]);
+        app(CharacterEquipmentService::class)->equip($character, $instance->uuid, 'main_hand');
+        $second = app(HuntService::class)->start($character, $zone);
+        $secondSnapshot = Hunt::findOrFail($second->huntId())->character_stats_snapshot;
+        $this->assertSame(2, $firstSnapshot['schema_version']);
+        $this->assertSame(10, $firstSnapshot['effective']['attack']);
+        $this->assertSame([], $firstSnapshot['equipment_sources']);
+        $this->assertSame(32, $secondSnapshot['effective']['attack']);
+        $this->assertSame($instance->uuid, $secondSnapshot['equipment_sources'][0]['item_instance_uuid']);
+        $this->assertSame(9, $secondSnapshot['equipment_sources'][0]['refinement_level']);
+        $this->assertSame(22, $secondSnapshot['equipment_sources'][0]['bonuses']['attack']);
+        $this->assertSame('common', $secondSnapshot['equipment_sources'][0]['rarity_code']);
+        $this->assertArrayHasKey('equipment_base', $secondSnapshot);
+        $this->assertArrayHasKey('refinement', $secondSnapshot);
+        $this->assertSame($firstSnapshot, Hunt::findOrFail($first->huntId())->character_stats_snapshot);
+        $v1 = ['schema_version' => 1, 'base' => [], 'equipment' => [], 'effective' => [], 'equipment_sources' => []];
+        $this->assertTrue(\App\Domain\Characters\Data\CharacterStatsBreakdown::supportsSnapshot($v1));
+        $this->assertTrue(\App\Domain\Characters\Data\CharacterStatsBreakdown::supportsSnapshot($secondSnapshot));
+    }
+}

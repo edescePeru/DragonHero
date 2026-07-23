@@ -7,6 +7,7 @@ use App\Domain\Inventory\Instances\ItemInstanceEventService;
 use App\Domain\Inventory\Instances\ItemInstanceEventType;
 use App\Domain\Inventory\Instances\ItemInstanceLimits;
 use App\Domain\Inventory\Instances\ItemInstanceStatus;
+use App\Domain\Inventory\Instances\ItemRefinementConfiguration;
 use App\Domain\Inventory\InventoryService;
 use App\Domain\Random\RandomNumberGenerator;
 use App\Domain\Wallet\GoldReasonCode;
@@ -27,8 +28,8 @@ use RuntimeException;
 
 final class ItemRefinementService
 {
-    private $tokens; private $rules; private $equippable; private $inventory; private $wallet; private $events; private $rng;
-    public function __construct(RefinementTokenService $tokens, RefinementRuleValidator $rules, EquippableItemValidator $equippable, InventoryService $inventory, WalletService $wallet, ItemInstanceEventService $events, RandomNumberGenerator $rng) { $this->tokens=$tokens;$this->rules=$rules;$this->equippable=$equippable;$this->inventory=$inventory;$this->wallet=$wallet;$this->events=$events;$this->rng=$rng; }
+    private $tokens; private $rules; private $equippable; private $configuration; private $inventory; private $wallet; private $events; private $rng;
+    public function __construct(RefinementTokenService $tokens, RefinementRuleValidator $rules, EquippableItemValidator $equippable, ItemRefinementConfiguration $configuration, InventoryService $inventory, WalletService $wallet, ItemInstanceEventService $events, RandomNumberGenerator $rng) { $this->tokens=$tokens;$this->rules=$rules;$this->equippable=$equippable;$this->configuration=$configuration;$this->inventory=$inventory;$this->wallet=$wallet;$this->events=$events;$this->rng=$rng; }
 
     public function refine(Character $character, ItemInstance $instance, $opaqueToken)
     {
@@ -47,6 +48,8 @@ final class ItemRefinementService
 
             $item = Item::whereKey($lockedInstance->item_id)->lockForUpdate()->firstOrFail();
             if ($item->status !== CatalogStatus::ACTIVE || $this->equippable->equipmentType($item) === null) throw new InvalidArgumentException('Only active valid equipment can be refined.');
+            $this->configuration->validate($item);
+            if (!$item->allows_refinement) throw new InvalidArgumentException('This Item does not allow refinement.');
             $rule = RefinementLevel::where('from_level',$lockedInstance->refinement_level)->where('status',CatalogStatus::ACTIVE)->lockForUpdate()->first();
             if (!$rule) throw new InvalidArgumentException('No active refinement rule is configured.');
             $this->rules->validate($rule);

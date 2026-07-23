@@ -1,3 +1,106 @@
 <?php
-namespace App\Domain\Equipment;use App\Domain\Equipment\Data\CharacterEquipmentStats;use App\Domain\Equipment\Data\ItemStatBonuses;use App\Domain\Inventory\Instances\ItemInstanceStatus;use App\Domain\Inventory\Instances\Refinement\ItemRefinementStatCalculator;use App\Domain\WorldCatalog\CatalogStatus;use App\Models\Character;use App\Models\Item;use App\Models\RefinementStatModifier;use InvalidArgumentException;
-final class CharacterEquipmentStatsProvider{private $items,$refinement,$eligibility;public function __construct(EquippableItemValidator $items,ItemRefinementStatCalculator $refinement,EquipmentEligibilityService $eligibility){$this->items=$items;$this->refinement=$refinement;$this->eligibility=$eligibility;}public function snapshot(Character $character){if(!$character->exists)return new CharacterEquipmentStats(new ItemStatBonuses(),[]);$character->loadMissing('characterClass');$rows=$character->equipment()->with('itemInstance')->orderBy('slot')->get();$ids=$rows->map(function($row){return$row->itemInstance?$row->itemInstance->item_id:null;})->filter()->unique()->values();$levels=$rows->map(function($row){return$row->itemInstance?(int)$row->itemInstance->refinement_level:0;})->filter(function($level){return$level>0;})->unique()->values();$catalog=$ids->isEmpty()?collect():Item::whereIn('id',$ids)->with('allowedCharacterClasses')->get()->keyBy('id');$modifiers=$levels->isEmpty()?collect():RefinementStatModifier::whereIn('refinement_level',$levels)->where('status',CatalogStatus::ACTIVE)->get()->keyBy('refinement_level');$base=$this->zero();$refined=$this->zero();$sources=[];foreach($rows as$row){$instance=$row->itemInstance;$item=$instance?$catalog->get($instance->item_id):null;if(!$instance||!$item||(int)$row->character_id!==(int)$character->id||(int)$instance->character_id!==(int)$character->id||$instance->status!==ItemInstanceStatus::EQUIPPED)throw new InvalidArgumentException('Inconsistent character equipment state.');$this->items->assertCompatible($item,$row->slot);$eligibility=$this->eligibility->evaluate($character,$instance,$item,$row->slot,$item->allowedCharacterClasses,$character->characterClass);$part=$this->refinement->calculate($this->raw($item),(int)$instance->refinement_level,$modifiers->get((int)$instance->refinement_level));$base=$this->add($base,$part->base());$refined=$this->add($refined,$part->refinement());$sources[]=['slot'=>$row->slot,'item_instance_uuid'=>$instance->uuid,'item_id'=>(int)$item->id,'item_code'=>$item->code,'item_name'=>$item->name,'refinement_level'=>(int)$instance->refinement_level,'refinement_modifier_basis_points'=>$part->basisPoints(),'refinement_modifier_configured'=>$part->configured(),'base_bonuses'=>$part->base()->toArray(),'refinement_bonuses'=>$part->refinement()->toArray(),'total_bonuses'=>$part->total()->toArray(),'bonuses'=>$part->total()->toArray(),'eligibility_current'=>$eligibility->eligible(),'eligibility_reason_codes'=>$eligibility->reasonCodes(),'eligibility_message'=>$eligibility->message()];}$total=$this->add($base,$refined);return new CharacterEquipmentStats($total,$sources,$base,$refined);}private function raw(Item $item){return['max_health'=>$item->max_health_bonus,'attack'=>$item->attack_bonus,'defense'=>$item->defense_bonus,'accuracy'=>$item->accuracy_bonus,'evasion'=>$item->evasion_bonus,'critical_chance'=>$item->critical_chance_bonus,'attack_speed'=>$item->attack_speed_bonus,'absorb_damage_basis_points'=>$item->absorb_damage_basis_points];}private function zero(){return new ItemStatBonuses();}private function add(ItemStatBonuses $a,ItemStatBonuses $b){$ints=[];foreach([[$a->maxHealth(),$b->maxHealth()],[$a->attack(),$b->attack()],[$a->defense(),$b->defense()],[$a->accuracy(),$b->accuracy()],[$a->evasion(),$b->evasion()],[$a->absorbDamageBasisPoints(),$b->absorbDamageBasisPoints()]]as$pair){if($pair[1]>PHP_INT_MAX-$pair[0])throw new InvalidArgumentException('Equipment stat bonus overflow.');$ints[]=$pair[0]+$pair[1];}$critical=$a->criticalChanceHundredths()+$b->criticalChanceHundredths();$speed=$a->attackSpeedHundredths()+$b->attackSpeedHundredths();if($critical<0||$speed<0)throw new InvalidArgumentException('Equipment decimal bonus overflow.');return new ItemStatBonuses($ints[0],$ints[1],$ints[2],$ints[3],$ints[4],ItemStatBonuses::decimalFromHundredths($critical),ItemStatBonuses::decimalFromHundredths($speed),$ints[5]);}}
+
+namespace App\Domain\Equipment;
+
+use App\Domain\Equipment\Data\CharacterEquipmentStats;
+use App\Domain\Equipment\Data\ItemStatBonuses;
+use App\Domain\Inventory\Instances\EffectiveItemStatsResolver;
+use App\Domain\Inventory\Instances\ItemInstanceStatus;
+use App\Domain\WorldCatalog\CatalogStatus;
+use App\Models\Character;
+use App\Models\Item;
+use App\Models\RefinementStatModifier;
+use InvalidArgumentException;
+
+final class CharacterEquipmentStatsProvider
+{
+    private $items;
+    private $stats;
+    private $eligibility;
+
+    public function __construct(EquippableItemValidator $items, EffectiveItemStatsResolver $stats, EquipmentEligibilityService $eligibility)
+    {
+        $this->items = $items;
+        $this->stats = $stats;
+        $this->eligibility = $eligibility;
+    }
+
+    public function snapshot(Character $character)
+    {
+        if (!$character->exists) {
+            return new CharacterEquipmentStats(new ItemStatBonuses(), []);
+        }
+        $character->loadMissing('characterClass');
+        $rows = $character->equipment()->with('itemInstance.itemRarity')->orderBy('slot')->get();
+        $ids = $rows->map(function ($row) {
+            return $row->itemInstance ? $row->itemInstance->item_id : null;
+        })->filter()->unique()->values();
+        $levels = $rows->map(function ($row) {
+            return $row->itemInstance ? (int) $row->itemInstance->refinement_level : 0;
+        })->filter(function ($level) {
+            return $level > 0;
+        })->unique()->values();
+        $catalog = $ids->isEmpty() ? collect() : Item::whereIn('id', $ids)->with('allowedCharacterClasses')->get()->keyBy('id');
+        $modifiers = $levels->isEmpty() ? collect() : RefinementStatModifier::whereIn('refinement_level', $levels)->where('status', CatalogStatus::ACTIVE)->get()->keyBy('refinement_level');
+        $base = $this->zero();
+        $refined = $this->zero();
+        $rarity = $this->zero();
+        $sources = [];
+        foreach ($rows as $row) {
+            $instance = $row->itemInstance;
+            $item = $instance ? $catalog->get($instance->item_id) : null;
+            if (!$instance || !$item || (int) $row->character_id !== (int) $character->id || (int) $instance->character_id !== (int) $character->id || $instance->status !== ItemInstanceStatus::EQUIPPED) {
+                throw new InvalidArgumentException('Inconsistent character equipment state.');
+            }
+            $this->items->assertCompatible($item, $row->slot);
+            $eligibility = $this->eligibility->evaluate($character, $instance, $item, $row->slot, $item->allowedCharacterClasses, $character->characterClass);
+            $part = $this->stats->resolve($item, $instance, $modifiers->get((int) $instance->refinement_level));
+            $base = $this->add($base, $part->base());
+            $refined = $this->add($refined, $part->refinement());
+            $rarity = $this->add($rarity, $part->rarity());
+            $sources[] = [
+                'slot' => $row->slot,
+                'item_instance_uuid' => $instance->uuid,
+                'item_id' => (int) $item->id,
+                'item_code' => $item->code,
+                'item_name' => $item->name,
+                'rarity_id' => (int) $instance->itemRarity->id,
+                'rarity_code' => $instance->itemRarity->code,
+                'rarity_name' => $instance->itemRarity->name,
+                'rarity_visual_style' => $instance->itemRarity->visual_style,
+                'refinement_level' => (int) $instance->refinement_level,
+                'refinement_modifier_basis_points' => $part->basisPoints(),
+                'refinement_modifier_configured' => true,
+                'base_bonuses' => $part->base()->toArray(),
+                'refinement_bonuses' => $part->refinement()->toArray(),
+                'rarity_bonuses' => $part->rarity()->toArray(),
+                'total_bonuses' => $part->total()->toArray(),
+                'bonuses' => $part->total()->toArray(),
+                'eligibility_current' => $eligibility->eligible(),
+                'eligibility_reason_codes' => $eligibility->reasonCodes(),
+                'eligibility_message' => $eligibility->message(),
+            ];
+        }
+        $total = $this->add($this->add($base, $refined), $rarity);
+        return new CharacterEquipmentStats($total, $sources, $base, $this->add($refined, $rarity));
+    }
+
+    private function zero()
+    {
+        return new ItemStatBonuses();
+    }
+
+    private function add(ItemStatBonuses $a, ItemStatBonuses $b)
+    {
+        $ints = [];
+        foreach ([[$a->maxHealth(), $b->maxHealth()], [$a->attack(), $b->attack()], [$a->defense(), $b->defense()], [$a->accuracy(), $b->accuracy()], [$a->evasion(), $b->evasion()], [$a->absorbDamageBasisPoints(), $b->absorbDamageBasisPoints()]] as $pair) {
+            if ($pair[1] > PHP_INT_MAX - $pair[0]) {
+                throw new InvalidArgumentException('Equipment stat bonus overflow.');
+            }
+            $ints[] = $pair[0] + $pair[1];
+        }
+        $critical = $a->criticalChanceHundredths() + $b->criticalChanceHundredths();
+        $speed = $a->attackSpeedHundredths() + $b->attackSpeedHundredths();
+        return new ItemStatBonuses($ints[0], $ints[1], $ints[2], $ints[3], $ints[4], ItemStatBonuses::decimalFromHundredths($critical), ItemStatBonuses::decimalFromHundredths($speed), $ints[5]);
+    }
+}

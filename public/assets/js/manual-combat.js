@@ -141,7 +141,14 @@
             }
         }, function (error) { requestInFlight = false; handleError(error, !error.status); });
     }
-    function submitClaim() { if (requestInFlight) return; requestInFlight = true; render(state, []); request(config.claimUrl, { method: 'POST' }).then(function (data) { requestInFlight = false; state.rewards = data.rewards; render(state, []); message('Recompensas reclamadas correctamente.', 'success'); return loadCombatState(true); }).catch(function (error) { requestInFlight = false; handleError(error, false); }); }
+    function replaceInventoryPanel(html) {
+        if (typeof html !== 'string' || html === '') return;
+        var current = byId('manual-combat-inventory-panel');
+        var documentFragment = new window.DOMParser().parseFromString(html, 'text/html');
+        var replacement = documentFragment.getElementById('manual-combat-inventory-panel');
+        if (current && replacement) current.replaceWith(document.importNode(replacement, true));
+    }
+    function submitClaim() { if (requestInFlight) return; requestInFlight = true; render(state, []); request(config.claimUrl, { method: 'POST' }).then(function (data) { requestInFlight = false; state.rewards = data.rewards; replaceInventoryPanel(data.inventory_html); render(state, []); message('Recompensas reclamadas correctamente.', 'success'); return loadCombatState(true); }).catch(function (error) { requestInFlight = false; handleError(error, false); }); }
     function submitAbandon() { if (requestInFlight || !state || !state.can_abandon) return; requestInFlight = true; render(state, []); var payload = { client_request_id: uuid(), expected_lock_version: state.lock_version }; request(config.abandonUrl, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }).then(function (data) { requestInFlight = false; if (window.bootstrap) window.bootstrap.Modal.getOrCreateInstance(byId('manual-combat-abandon-modal')).hide(); render(data.combat, data.combat.events); }).catch(function (error) { requestInFlight = false; handleError(error, false); }); }
 
     document.querySelectorAll('[data-select-target]').forEach(function (target) {

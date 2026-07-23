@@ -1,0 +1,4 @@
+<?php
+namespace App\Http\Controllers\Admin\Content;
+use App\Domain\Admin\Content\ItemRarityContentService;use App\Http\Controllers\Controller;use App\Http\Requests\Admin\Content\UpdateItemRarityRequest;use App\Models\ItemRarity;use InvalidArgumentException;
+final class ItemRarityController extends Controller{public function index(ItemRarityContentService $service){return view('admin.content.item-rarities.index',['rarities'=>$service->rows()]);}public function update(UpdateItemRarityRequest $request,ItemRarity $itemRarity,ItemRarityContentService $service){try{$service->update($itemRarity,$request->validated());return back()->with('status','Rareza actualizada correctamente.');}catch(InvalidArgumentException $exception){return back()->withInput()->withErrors(['rarity'=>$exception->getMessage()]);}}}

@@ -34,7 +34,7 @@ final class ManualCombatRewardGenerationService
         $monster = Monster::whereKey($participant->source_id)->firstOrFail();
         $entries = MonsterLootEntry::where('monster_id', $monster->id)->where('status', CatalogStatus::ACTIVE)
             ->whereHas('item', function ($query) { $query->where('status', CatalogStatus::ACTIVE); })
-            ->with('item')->orderBy('sort_order')->orderBy('id')->get();
+            ->with('item.allowedRarities')->orderBy('sort_order')->orderBy('id')->get();
         $values = $this->values->generate($monster);
         $loot = $this->loot->generateFromLoadedEntries($monster, $entries);
         $now = CarbonImmutable::now();
@@ -59,7 +59,11 @@ final class ManualCombatRewardGenerationService
                 'item_name_snapshot' => $drop->itemName(),
                 'quantity' => $drop->quantity(),
                 'loot_entry_id' => $entry ? $entry->id : null,
-                'generation_metadata' => ['version' => 1, 'configured_chance_basis_points' => $drop->configuredChanceBasisPoints(), 'roll_basis_points' => $drop->chanceRollBasisPoints()],
+                'generation_metadata' => ['version' => 2, 'configured_probability_ppm' => $drop->configuredProbabilityPpm(), 'roll_ppm' => $drop->probabilityRollPpm()],
+                'item_rarity_id' => $drop->resolvedItemRarityId(),
+                'rarity_code_snapshot' => $drop->resolvedItemRarityCode(),
+                'rarity_name_snapshot' => $drop->resolvedItemRarityId() ? \App\Models\ItemRarity::whereKey($drop->resolvedItemRarityId())->value('name') : null,
+                'rarity_roll_metadata' => $drop->itemRarityRollResult() ? $drop->itemRarityRollResult()->metadata() : null,
             ]);
             $publicItems[] = ['item_id' => (int) $line->item_id, 'name' => $line->item_name_snapshot, 'quantity' => (int) $line->quantity];
         }

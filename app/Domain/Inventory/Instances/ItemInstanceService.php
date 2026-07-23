@@ -9,6 +9,7 @@ use App\Models\HuntRewardItem;
 use App\Models\Item;
 use App\Models\ItemInstance;
 use App\Models\ItemInstanceEvent;
+use App\Models\ItemRarity;
 use App\Models\ShopPurchase;
 use App\Models\ShopSale;
 use Carbon\CarbonImmutable;
@@ -21,23 +22,25 @@ final class ItemInstanceService
 {
     private $classification;
     private $events;
-    public function __construct(ItemClassification $classification, ItemInstanceEventService $events) { $this->classification = $classification; $this->events = $events; }
+    private $rarities;
+    public function __construct(ItemClassification $classification, ItemInstanceEventService $events, ItemInstanceRarityResolver $rarities) { $this->classification = $classification; $this->events = $events; $this->rarities = $rarities; }
 
-    public function createFromRewardLocked(Character $character, HuntRewardItem $line, Item $item, string $operationUuid, CarbonImmutable $now): Collection
+    public function createFromRewardLocked(Character $character, HuntRewardItem $line, Item $item, string $operationUuid, CarbonImmutable $now, $rarity = null): Collection
     {
-        return $this->createLocked($character, $line, $item, $operationUuid, $now, ItemInstanceOriginType::HUNT_REWARD_ITEM, ItemInstanceEventType::CREATED_FROM_HUNT_REWARD, 'hunt-reward-item-instance:v1:');
+        return $this->createLocked($character, $line, $item, $operationUuid, $now, ItemInstanceOriginType::HUNT_REWARD_ITEM, ItemInstanceEventType::CREATED_FROM_HUNT_REWARD, 'hunt-reward-item-instance:v1:', $rarity);
     }
 
-    public function createFromCombatRewardLocked(Character $character, CombatPendingRewardItem $line, Item $item, string $operationUuid, CarbonImmutable $now): Collection
+    public function createFromCombatRewardLocked(Character $character, CombatPendingRewardItem $line, Item $item, string $operationUuid, CarbonImmutable $now, $rarity = null): Collection
     {
-        return $this->createLocked($character, $line, $item, $operationUuid, $now, ItemInstanceOriginType::COMBAT_PENDING_REWARD_ITEM, ItemInstanceEventType::CREATED_FROM_COMBAT_REWARD, 'combat-reward-item-instance:v1:');
+        return $this->createLocked($character, $line, $item, $operationUuid, $now, ItemInstanceOriginType::COMBAT_PENDING_REWARD_ITEM, ItemInstanceEventType::CREATED_FROM_COMBAT_REWARD, 'combat-reward-item-instance:v1:', $rarity);
     }
 
-    public function createFromShopPurchaseLocked(Character $character, Item $item, ShopPurchase $purchase, int $quantity, CarbonImmutable $now): Collection
+    public function createFromShopPurchaseLocked(Character $character, Item $item, ShopPurchase $purchase, int $quantity, CarbonImmutable $now, $rarity = null): Collection
     {
         if (DB::transactionLevel() < 1) throw new RuntimeException('Active transaction required.');
         if ((int) $purchase->character_id !== (int) $character->id || (int) $purchase->item_id !== (int) $item->id || $this->classification->classify($item) !== ItemClassification::UNIQUE) throw new InvalidArgumentException('ShopPurchase requires a coherent unique Item.');
         $quantity = $this->positive($quantity);
+        $resolvedRarity = $this->rarities->resolve($item, $rarity);
         $operationUuid = $purchase->idempotency_key;
         $results = collect();
         for ($unit = 1; $unit <= $quantity; $unit++) {
@@ -45,6 +48,7 @@ final class ItemInstanceService
                 'uuid' => DragonHeroUuid::versionFive('shop-purchase-item-instance:v1:'.$purchase->id.':'.$unit),
                 'character_id' => $character->id,
                 'item_id' => $item->id,
+                'item_rarity_id' => $resolvedRarity->id,
                 'refinement_level' => 0,
                 'status' => ItemInstanceStatus::AVAILABLE,
                 'origin_type' => ItemInstanceOriginType::SHOP_PURCHASE,
@@ -65,10 +69,11 @@ final class ItemInstanceService
                 'refinement_after' => 0,
                 'source_type' => ItemInstanceOriginType::SHOP_PURCHASE,
                 'source_id' => $purchase->id,
-                'metadata' => null,
+                'metadata' => $this->rarityMetadata($resolvedRarity),
                 'occurred_at' => $now,
                 'created_at' => $now,
             ]);
+            $instance->setRelation('itemRarity', $resolvedRarity);
             $results->push($this->entry($instance, $item));
         }
         return $results;
@@ -84,21 +89,24 @@ final class ItemInstanceService
         $before = $instance->status;
         $instance->status = ItemInstanceStatus::SOLD;
         $instance->save();
-        $metadata = ['shop_sale_id'=>(int)$sale->id,'shop_id'=>(int)$sale->shop_id,'character_id'=>(int)$character->id,'item_id'=>(int)$instance->item_id,'item_instance_uuid'=>$instance->uuid,'refinement_level'=>(int)$instance->refinement_level,'status_before'=>$before,'sold_at'=>$now->toIso8601String()];
+        $rarity=$instance->relationLoaded('itemRarity')?$instance->itemRarity:$instance->itemRarity()->first();
+        $metadata = ['shop_sale_id'=>(int)$sale->id,'shop_id'=>(int)$sale->shop_id,'character_id'=>(int)$character->id,'item_id'=>(int)$instance->item_id,'item_instance_uuid'=>$instance->uuid,'rarity_id'=>$rarity?(int)$rarity->id:null,'rarity_code'=>$rarity?$rarity->code:ItemRarityCode::COMMON,'rarity_name'=>$rarity?$rarity->name:'Común','refinement_level'=>(int)$instance->refinement_level,'status_before'=>$before,'sold_at'=>$now->toIso8601String()];
         $this->events->appendSoldToShop($instance,$character,$sale,$metadata,$now);
         return $instance;
     }
 
-    private function createLocked(Character $character, $line, Item $item, string $operationUuid, CarbonImmutable $now, $originType, $eventType, $uuidPrefix)
+    private function createLocked(Character $character, $line, Item $item, string $operationUuid, CarbonImmutable $now, $originType, $eventType, $uuidPrefix, $rarity)
     {
         if (DB::transactionLevel() < 1) throw new RuntimeException('Active transaction required.');
         if ((int) $line->item_id !== (int) $item->id || $this->classification->classify($item) !== ItemClassification::UNIQUE) throw new InvalidArgumentException('Reward line requires a coherent unique Item.');
         $quantity = $this->positive($line->quantity); $results = collect();
+        $resolvedRarity = $this->resolveRewardRarity($line, $item, $rarity);
         for ($unit = 1; $unit <= $quantity; $unit++) {
             $existing = ItemInstance::where('origin_type', $originType)->where('origin_id', $line->id)->where('origin_unit_index', $unit)->lockForUpdate()->first();
             if ($existing) { $this->assertCompatibleReplay($existing, $character, $line, $item, $unit, $operationUuid, $originType, $eventType); $results->push($this->entry($existing, $item)); continue; }
-            $instance = ItemInstance::create(['uuid' => DragonHeroUuid::versionFive($uuidPrefix.$line->id.':'.$unit), 'character_id' => $character->id, 'item_id' => $item->id, 'refinement_level' => 0, 'status' => ItemInstanceStatus::AVAILABLE, 'origin_type' => $originType, 'origin_id' => $line->id, 'origin_unit_index' => $unit, 'acquired_at' => $now]);
-            ItemInstanceEvent::create(['item_instance_id' => $instance->id, 'operation_uuid' => $operationUuid, 'event_type' => $eventType, 'actor_character_id' => $character->id, 'from_character_id' => null, 'to_character_id' => $character->id, 'from_item_id' => null, 'to_item_id' => $item->id, 'refinement_before' => null, 'refinement_after' => 0, 'source_type' => $originType, 'source_id' => $line->id, 'metadata' => null, 'occurred_at' => $now, 'created_at' => $now]);
+            $instance = ItemInstance::create(['uuid' => DragonHeroUuid::versionFive($uuidPrefix.$line->id.':'.$unit), 'character_id' => $character->id, 'item_id' => $item->id, 'item_rarity_id' => $resolvedRarity->id, 'refinement_level' => 0, 'status' => ItemInstanceStatus::AVAILABLE, 'origin_type' => $originType, 'origin_id' => $line->id, 'origin_unit_index' => $unit, 'acquired_at' => $now]);
+            ItemInstanceEvent::create(['item_instance_id' => $instance->id, 'operation_uuid' => $operationUuid, 'event_type' => $eventType, 'actor_character_id' => $character->id, 'from_character_id' => null, 'to_character_id' => $character->id, 'from_item_id' => null, 'to_item_id' => $item->id, 'refinement_before' => null, 'refinement_after' => 0, 'source_type' => $originType, 'source_id' => $line->id, 'metadata' => $this->rarityMetadata($resolvedRarity), 'occurred_at' => $now, 'created_at' => $now]);
+            $instance->setRelation('itemRarity', $resolvedRarity);
             $results->push($this->entry($instance, $item));
         }
         return $results;
@@ -112,5 +120,7 @@ final class ItemInstanceService
         if (!$valid) throw new RuntimeException('ItemInstance origin collision or incompatible replay.');
     }
     private function positive($value) { if (is_int($value) && $value > 0) return $value; if (is_string($value) && preg_match('/^[1-9][0-9]*$/', $value)) { $maximum = (string) PHP_INT_MAX; if (strlen($value) < strlen($maximum) || (strlen($value) === strlen($maximum) && strcmp($value, $maximum) <= 0)) return (int) $value; } throw new InvalidArgumentException('Invalid unique reward quantity.'); }
-    private function entry(ItemInstance $instance, Item $item) { return new ItemInstanceEntry($instance->uuid, (int) $item->id, $item->code, $item->name, (int) $instance->refinement_level, $instance->status, $instance->acquired_at->toIso8601String()); }
+    private function entry(ItemInstance $instance, Item $item) { $rarity=$instance->relationLoaded('itemRarity')?$instance->itemRarity:$instance->itemRarity()->firstOrFail();return new ItemInstanceEntry($instance->uuid, (int) $item->id, $item->code, $item->name, (int) $instance->refinement_level, $instance->status, $instance->acquired_at->toIso8601String(),(int)$rarity->id,$rarity->code,$rarity->name,$rarity->visual_style); }
+    private function rarityMetadata($rarity){return['rarity_id'=>(int)$rarity->id,'rarity_code'=>$rarity->code,'rarity_name'=>$rarity->name];}
+    private function resolveRewardRarity($line,Item $item,$rarity){if($rarity!==null)return$this->rarities->resolve($item,$rarity);if($line->item_rarity_id)return ItemRarity::whereKey($line->item_rarity_id)->firstOrFail();$allowed=$item->allowedRarities()->get();if($allowed->count()===1)return$allowed->first();$common=$allowed->firstWhere('code',ItemRarityCode::COMMON);if($common)return$common;throw new InvalidArgumentException('Historical unique reward has multiple rarities and no deterministic common fallback.');}
 }

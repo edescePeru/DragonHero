@@ -1,9 +1,25 @@
+.item-rarity-visual.item-rarity-visual {
+  border-width: var(--rarity-border-width);
+  border-style: solid;
+  border-color: rgba(var(--rarity-border-rgb), var(--rarity-border-opacity));
+  box-shadow: inset 0 0 var(--rarity-glow-blur) var(--rarity-glow-spread) rgba(var(--rarity-glow-rgb), var(--rarity-glow-opacity));
+}
+.item-rarity-visual.item-rarity-visual > * { position: relative; z-index: 1; }
+.rarity-preview-card { min-height: 130px; padding: 1rem; border-radius: .75rem; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #fff; }
+.rarity-preview-card--dark { background: #182230; color: #fff; }
+
 .character-overview {
   .overview-portrait { width: 88px; height: 88px; border-radius: 1rem; object-fit: cover; flex: 0 0 auto; }
   .overview-placeholder { display: grid; place-items: center; background: rgba($primary, .1); color: $primary; font-size: 2rem; font-weight: 700; }
   .overview-equipment-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; }
   .overview-slot, .overview-inventory-slot { position: relative; min-width: 0; min-height: 116px; border: 1px dashed $gray-300; border-radius: .75rem; padding: .5rem; background: $gray-100; }
   .overview-slot--occupied, .overview-inventory-slot:not(.overview-inventory-slot--empty) { border-style: solid; background: $white; }
+  .overview-slot.item-rarity-visual,
+  .overview-inventory-slot.item-rarity-visual {
+    border-width: var(--rarity-border-width);
+    border-style: solid;
+    border-color: rgba(var(--rarity-border-rgb), var(--rarity-border-opacity));
+  }
   .overview-slot-label { display: block; color: $secondary; font-size: .72rem; text-align: center; margin-bottom: .35rem; }
   .overview-item-button { position: relative; width: 100%; height: 100%; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .35rem; border: 0; background: transparent; color: inherit; padding: .25rem; }
   .overview-item-button:focus-visible { outline: 3px solid rgba($primary, .35); border-radius: .5rem; }
@@ -14,6 +30,14 @@
   .overview-empty-slot i, .overview-inventory-slot--empty i { font-size: 1.4rem; }
   .overview-inventory-grid { display: grid; grid-template-columns: repeat(10, minmax(72px, 1fr)); gap: .65rem; }
   .overview-inventory-slot { min-height: 104px; padding: .35rem; }
+  .overview-inventory-slot--rarity-neutral:not(.item-rarity-visual) { border-color: $gray-400; }
+  .overview-inventory-slot--rarity-blue:not(.item-rarity-visual) { border-color: #2563eb; background: #eff6ff; }
+  .overview-inventory-slot--rarity-purple:not(.item-rarity-visual) { border-color: #7e22ce; background: #faf5ff; }
+  .overview-inventory-slot--rarity-gold:not(.item-rarity-visual) { border-color: #b7791f; background: #fffbeb; }
+  .overview-inventory-slot--rarity-blue:not(.item-rarity-visual),
+  .overview-inventory-slot--rarity-purple:not(.item-rarity-visual),
+  .overview-inventory-slot--rarity-gold:not(.item-rarity-visual) { border-width: 2px; }
+  .overview-instance-reference { color: $gray-500; font-size: .62rem; line-height: 1.1; text-align: center; }
   .overview-inventory-slot--empty { display: grid; place-items: center; color: $gray-400; min-height: 104px; }
   .overview-quantity { position: absolute; top: .1rem; right: .1rem; }
 }

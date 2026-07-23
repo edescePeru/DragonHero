@@ -1,4 +1,4 @@
-<section class="card">
+<section class="card" id="manual-combat-inventory-panel">
     <div class="card-header d-flex flex-wrap justify-content-between gap-2">
         <span>Inventario</span>
         <span>Usados <strong>{{ $inventory['inventory_status']['current_used_slots'] }}</strong> de <strong>{{ $inventory['inventory_status']['effective_capacity'] }}</strong> · Libres <strong>{{ $inventory['inventory_status']['current_free_slots'] }}</strong></span>
@@ -15,9 +15,9 @@
             @empty
             @endforelse
             @foreach($inventory['item_instances'] as $item)
-                <article class="manual-combat-item-card">
+                <article class="manual-combat-item-card item-rarity-visual" style="{{ $item['rarity_visual_style_attribute'] }}" data-item-instance-reference="{{ $item['public_reference'] }}">
                     <div class="manual-combat-item-image">@if($item['image_url'])<img src="{{ $item['image_url'] }}" alt="" loading="lazy">@else<span aria-hidden="true">◇</span>@endif</div>
-                    <span>{{ $item['item_name'] }}</span><strong>+{{ $item['refinement_level'] }}</strong>
+                    <span>{{ $item['item_name'] }}</span><span class="badge item-rarity item-rarity--{{ $item['rarity_visual_style'] }}">{{ $item['rarity_name'] }}</span><strong>+{{ $item['refinement_level'] }}</strong><small class="text-secondary">Instancia #{{ $item['public_reference'] }}</small>
                 </article>
             @endforeach
             @if(count($inventory['stackable_items']) === 0 && count($inventory['item_instances']) === 0)<p class="mb-0 text-secondary">Tu inventario está vacío.</p>@endif

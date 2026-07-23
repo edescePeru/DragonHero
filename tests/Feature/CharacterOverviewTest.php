@@ -11,6 +11,7 @@ use App\Models\Character;
 use App\Models\CharacterItem;
 use App\Models\Item;
 use App\Models\ItemInstance;
+use App\Models\ItemRarity;
 use App\Models\User;
 use Database\Seeders\CharacterLevelRequirementSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -137,6 +138,142 @@ class CharacterOverviewTest extends TestCase
         $this->assertSame(3, substr_count($response->getContent(), 'Ver detalles de Espada individual'));
     }
 
+    public function test_unique_instances_use_their_authoritative_rarity_and_public_reference()
+    {
+        $character = Character::factory()->selected()->create();
+        $item = $this->uniqueItem('overview_instance_rarity', 'Espada con rarezas');
+        $common = ItemRarity::where('code', 'common')->firstOrFail();
+        $legendary = ItemRarity::where('code', 'legendary')->firstOrFail();
+        $item->allowedRarities()->sync([$common->id, $legendary->id]);
+        $commonInstance = $this->createItemInstance($character, $item, $common->id);
+        $legendaryInstance = $this->createItemInstance($character, $item, $legendary->id);
+        $commonReference = strtoupper(substr(str_replace('-', '', $commonInstance->uuid), -8));
+        $legendaryReference = strtoupper(substr(str_replace('-', '', $legendaryInstance->uuid), -8));
+
+        $snapshot = app(\App\Domain\Characters\Overview\CharacterOverviewService::class)->snapshot($character);
+        $instances = collect($snapshot['inventory']['entries'])->where('kind', 'instance')->keyBy('instance_uuid');
+        $legendaryRow = $instances->get($legendaryInstance->uuid);
+
+        $this->assertSame($legendaryReference, $legendaryRow['public_reference']);
+        $this->assertSame((int) $legendary->id, $legendaryRow['rarity_id']);
+        $this->assertSame('legendary', $legendaryRow['rarity_code']);
+        $this->assertSame('Legendario', $legendaryRow['rarity_name']);
+        $this->assertSame('gold', $legendaryRow['rarity_visual_style']);
+        $this->assertSame('overview-inventory-slot--rarity-gold', $legendaryRow['rarity_container_class']);
+        $this->assertSame('183, 121, 31', $legendaryRow['css_variables']['--rarity-border-rgb']);
+        $this->assertSame('0.35', $legendaryRow['css_variables']['--rarity-glow-opacity']);
+        $this->assertContains('Rareza: Legendario', $legendaryRow['details']);
+        $this->assertNotContains('Rareza: common', $legendaryRow['details']);
+
+        $response = $this->actingAs($character->user)->get(route('characters.overview', $character));
+        $response->assertOk()
+            ->assertSee('overview-inventory-slot--rarity-neutral', false)
+            ->assertSee('overview-inventory-slot--rarity-gold', false)
+            ->assertSee('item-rarity-visual', false)
+            ->assertSee('--rarity-border-rgb:183, 121, 31', false)
+            ->assertSee('Rareza: Común')
+            ->assertSee('Rareza: Legendario')
+            ->assertSee('Instancia #'.$commonReference)
+            ->assertSee('Instancia #'.$legendaryReference)
+            ->assertDontSee('Rareza: common');
+        $this->assertSame(2, substr_count($response->getContent(), 'Ver detalles de Espada con rarezas'));
+        $legendary->update(['border_color_hex'=>'#112233']);
+        $this->actingAs($character->user)->get(route('characters.overview',$character))->assertSee('--rarity-border-rgb:17, 34, 51',false);
+
+        $styles = file_get_contents(base_path('src/assets/scss/_character-overview.scss'));
+        $baseRule = strpos($styles, '.overview-slot, .overview-inventory-slot');
+        $dynamicRule = strpos($styles, '.overview-slot.item-rarity-visual');
+        $this->assertNotFalse($baseRule);
+        $this->assertNotFalse($dynamicRule);
+        $this->assertGreaterThan($baseRule, $dynamicRule);
+        $this->assertStringContainsString('border-color: rgba(var(--rarity-border-rgb), var(--rarity-border-opacity));', $styles);
+        $this->assertStringContainsString('box-shadow: inset 0 0 var(--rarity-glow-blur)', $styles);
+        $this->assertStringContainsString('.overview-inventory-slot--rarity-gold:not(.item-rarity-visual)', $styles);
+        $this->assertStringNotContainsString('!important', $styles);
+    }
+
+    public function test_legendary_item_instance_exposes_effective_stats_and_overview_formats_totals()
+    {
+        $character = Character::factory()->selected()->create();
+        $item = $this->uniqueItem('legendary_overview_stats', 'Espada legendaria', [
+            'attack_bonus' => 1,
+            'accuracy_bonus' => 0,
+            'critical_chance_bonus' => '0.00',
+        ]);
+        $legendary = ItemRarity::where('code', 'legendary')->firstOrFail();
+        $item->allowedRarities()->sync([$legendary->id]);
+        $instance = $this->createItemInstance($character, $item, $legendary->id);
+
+        $summary = app(\App\Domain\Inventory\CharacterInventorySummaryService::class)->snapshot($character);
+        $entry = collect($summary['item_instances'])->firstWhere('uuid', $instance->uuid);
+
+        $this->assertSame(1, $entry['base_bonuses']['attack']);
+        $this->assertSame(0, $entry['base_bonuses']['accuracy']);
+        $this->assertEquals(0.0, $entry['base_bonuses']['critical_chance']);
+        $this->assertSame(0, $entry['refinement_bonuses']['attack']);
+        $this->assertSame(5, $entry['rarity_bonuses']['accuracy']);
+        $this->assertEquals(4.0, $entry['rarity_bonuses']['critical_chance']);
+        $this->assertSame(1, $entry['total_bonuses']['attack']);
+        $this->assertSame(5, $entry['total_bonuses']['accuracy']);
+        $this->assertEquals(4.0, $entry['total_bonuses']['critical_chance']);
+        $this->assertSame($entry['total_bonuses'], $entry['bonuses']);
+
+        $reference = strtoupper(substr(str_replace('-', '', $instance->uuid), -8));
+        $response = $this->actingAs($character->user)->get(route('characters.overview', $character));
+        $response->assertOk()
+            ->assertSee('Rareza: Legendario')
+            ->assertSee('Ataque: +1')
+            ->assertSee('Precisión: +5 %')
+            ->assertSee('Crítico: +4.00 %')
+            ->assertSee('overview-inventory-slot--rarity-gold', false)
+            ->assertSee('Instancia #'.$reference)
+            ->assertDontSee('Precisión: +0')
+            ->assertDontSee('Crítico: +0')
+            ->assertDontSee('Rareza: common');
+    }
+
+    public function test_legendary_refinement_and_defensive_stats_keep_rarity_separate()
+    {
+        $character = Character::factory()->selected()->create();
+        $legendary = ItemRarity::where('code', 'legendary')->firstOrFail();
+        $weapon = $this->uniqueItem('legendary_refined_stats', 'Espada refinada', [
+            'attack_bonus' => 100,
+            'allows_refinement' => true,
+            'refinement_stat' => 'attack',
+        ]);
+        $weapon->allowedRarities()->sync([$legendary->id]);
+        $weaponInstance = $this->createItemInstance($character, $weapon, $legendary->id, 15);
+
+        $armor = Item::create([
+            'code' => 'legendary_defensive_stats',
+            'name' => 'Armadura legendaria',
+            'item_type' => 'equipment',
+            'equipment_type' => 'armor',
+            'rarity' => 'common',
+            'is_stackable' => false,
+            'max_stack' => 1,
+            'required_level' => 1,
+            'status' => 'active',
+        ]);
+        $armor->allowedRarities()->sync([$legendary->id]);
+        $this->createItemInstance($character, $armor, $legendary->id);
+
+        $summary = app(\App\Domain\Inventory\CharacterInventorySummaryService::class)->snapshot($character);
+        $weaponEntry = collect($summary['item_instances'])->firstWhere('uuid', $weaponInstance->uuid);
+        $this->assertSame(100, $weaponEntry['base_bonuses']['attack']);
+        $this->assertSame(50, $weaponEntry['refinement_bonuses']['attack']);
+        $this->assertSame(0, $weaponEntry['rarity_bonuses']['attack']);
+        $this->assertSame(5, $weaponEntry['rarity_bonuses']['accuracy']);
+        $this->assertEquals(4.0, $weaponEntry['rarity_bonuses']['critical_chance']);
+        $this->assertSame(150, $weaponEntry['total_bonuses']['attack']);
+
+        $this->actingAs($character->user)->get(route('characters.overview', $character))
+            ->assertOk()
+            ->assertSee('Evasión: +4 %')
+            ->assertSee('Velocidad: +2.00')
+            ->assertSee('AbsorbDamage: +1.00 %');
+    }
+
     public function test_frontend_contract_is_responsive_and_uses_safe_dom_updates()
     {
         $styles = file_get_contents(base_path('src/assets/scss/_character-overview.scss'));
@@ -182,13 +319,13 @@ class CharacterOverviewTest extends TestCase
         return Item::create(['code' => $code, 'name' => $name, 'item_type' => 'material', 'equipment_type' => null, 'rarity' => 'common', 'is_stackable' => true, 'max_stack' => $maxStack, 'status' => 'active']);
     }
 
-    private function uniqueItem($code, $name)
+    private function uniqueItem($code, $name, array $overrides = [])
     {
-        return Item::create(['code' => $code, 'name' => $name, 'item_type' => 'equipment', 'equipment_type' => 'weapon', 'rarity' => 'common', 'is_stackable' => false, 'max_stack' => 1, 'required_level' => 1, 'status' => 'active']);
+        return Item::create(array_merge(['code' => $code, 'name' => $name, 'item_type' => 'equipment', 'equipment_type' => 'weapon', 'rarity' => 'common', 'is_stackable' => false, 'max_stack' => 1, 'required_level' => 1, 'status' => 'active'], $overrides));
     }
 
-    private function createItemInstance(Character $character, Item $item)
+    private function createItemInstance(Character $character, Item $item, $rarityId = null, $refinementLevel = 0)
     {
-        return ItemInstance::create(['uuid' => (string) Str::uuid(), 'character_id' => $character->id, 'item_id' => $item->id, 'refinement_level' => 0, 'status' => ItemInstanceStatus::AVAILABLE, 'origin_type' => 'legacy_inventory', 'origin_id' => random_int(10000, 99999), 'origin_unit_index' => 1, 'acquired_at' => now()]);
+        return ItemInstance::create(['uuid' => (string) Str::uuid(), 'character_id' => $character->id, 'item_id' => $item->id, 'item_rarity_id' => $rarityId, 'refinement_level' => $refinementLevel, 'status' => ItemInstanceStatus::AVAILABLE, 'origin_type' => 'legacy_inventory', 'origin_id' => random_int(10000, 99999), 'origin_unit_index' => 1, 'acquired_at' => now()]);
     }
 }

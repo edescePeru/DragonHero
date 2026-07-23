@@ -56,7 +56,7 @@ class ManualCombatRewardTest extends TestCase
     private function guaranteedLoot()
     {
         $entry=MonsterLootEntry::whereHas('monster',function($q){$q->where('code','grey_wolf');})->with('item')->firstOrFail();
-        $entry->update(['drop_chance_basis_points'=>10000,'minimum_quantity'=>1,'maximum_quantity'=>1,'status'=>'active']); return$entry->fresh('item');
+        $entry->update(['drop_probability_ppm'=>1000000,'minimum_quantity'=>1,'maximum_quantity'=>1,'status'=>'active']); return$entry->fresh('item');
     }
     private function attack(Character $character,CombatSession $combat,$target,$uuid=null)
     {return$this->actingAs($character->user)->postJson(route('characters.manual-combats.actions.store',[$character,$combat]),['action_type'=>'basic_attack','target_participant_id'=>$target->id,'client_action_id'=>$uuid?:(string)Str::uuid(),'expected_lock_version'=>$combat->fresh()->lock_version]);}
@@ -74,6 +74,7 @@ class ManualCombatRewardTest extends TestCase
         $response=$this->attack($character,$combat,$target)->assertOk()->assertJsonPath('combat.status',ManualCombatStatus::WON)->assertJsonPath('combat.rewards.status',CombatPendingRewardStatus::GRANTED);
         $reward=CombatPendingReward::firstOrFail();$this->assertSame($combat->id,(int)$reward->combat_session_id);$this->assertSame($target->id,(int)$reward->source_participant_id);$this->assertSame((int)$target->source_id,(int)$reward->source_monster_id);$this->assertSame(4,(int)$reward->gold_amount);$this->assertGreaterThan(0,(int)$reward->experience_amount);$this->assertSame(CombatPendingRewardStatus::GRANTED,$reward->status);
         $this->assertDatabaseHas('combat_pending_reward_items',['combat_pending_reward_id'=>$reward->id,'item_id'=>$entry->item_id,'quantity'=>1]);
+        $metadata=$reward->items()->firstOrFail()->generation_metadata;$this->assertSame(2,$metadata['version']);$this->assertSame(1000000,$metadata['configured_probability_ppm']);$this->assertSame(1,$metadata['roll_ppm']);$this->assertArrayNotHasKey('configured_chance_basis_points',$metadata);
         $types=collect($response->json('events'))->pluck('type');$this->assertContains(ManualCombatEventType::REWARD_GENERATED,$types);$this->assertContains(ManualCombatEventType::REWARDS_GRANTED,$types);
         $this->assertNotNull($combat->fresh()->rewards_granted_at);$this->assertGreaterThan($beforeExperience,(int)$character->fresh()->experience);$this->assertSame(1,GoldTransaction::where('reference_type','combat_session')->where('reference_id',$combat->id)->count());
         $this->assertGreaterThanOrEqual(4,$rng->calls);$this->assertSame(0,HuntReward::count());
@@ -87,7 +88,8 @@ class ManualCombatRewardTest extends TestCase
         $this->assertSame(CombatPendingRewardStatus::PENDING_CLAIM,$response->json('combat.rewards.status'));
         $response->assertJsonPath('combat.rewards.claim_available',true);
         $this->assertNull($combat->fresh()->active_slot);$this->assertNull($combat->fresh()->rewards_granted_at);$this->assertSame(CombatPendingRewardStatus::PENDING_CLAIM,CombatPendingReward::first()->status);$this->assertSame($beforeExperience,(int)$character->fresh()->experience);$this->assertSame(0,GoldTransaction::count());$this->assertDatabaseMissing('character_items',['character_id'=>$character->id,'item_id'=>$entry->item_id]);$this->assertContains(ManualCombatEventType::REWARDS_PENDING_CLAIM,collect($response->json('events'))->pluck('type'));
-        $character->base_inventory_slots=3;$character->save();$claim=$this->actingAs($character->user)->postJson(route('characters.manual-combats.rewards.claim',[$character,$combat]))->assertOk()->assertJsonPath('idempotent_replay',false)->assertJsonPath('rewards.status',CombatPendingRewardStatus::GRANTED);
+        $character->base_inventory_slots=3;$character->save();$claim=$this->actingAs($character->user)->postJson(route('characters.manual-combats.rewards.claim',[$character,$combat]))->assertOk()->assertJsonPath('idempotent_replay',false)->assertJsonPath('rewards.status',CombatPendingRewardStatus::GRANTED)->assertJsonStructure(['inventory_html']);
+        $this->assertStringContainsString('id="manual-combat-inventory-panel"',$claim->json('inventory_html'));
         $goldCount=GoldTransaction::count();$quantity=(int)CharacterItem::where('character_id',$character->id)->where('item_id',$entry->item_id)->value('quantity');
         $this->postJson(route('characters.manual-combats.rewards.claim',[$character,$combat]))->assertOk()->assertJsonPath('idempotent_replay',true);$this->assertSame($goldCount,GoldTransaction::count());$this->assertSame($quantity,(int)CharacterItem::where('character_id',$character->id)->where('item_id',$entry->item_id)->value('quantity'));
     }

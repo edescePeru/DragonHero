@@ -2,6 +2,7 @@
 
 namespace App\Domain\WorldMaps;
 
+use App\Domain\Probability\PercentagePpmConverter;
 use App\Models\Character;
 use App\Models\WorldMapArea;
 use Carbon\CarbonImmutable;
@@ -10,6 +11,13 @@ use InvalidArgumentException;
 
 final class WorldMapAreaActionResolver
 {
+    private $probabilities;
+
+    public function __construct(PercentagePpmConverter $probabilities)
+    {
+        $this->probabilities = $probabilities;
+    }
+
     public function resolve(WorldMapArea $area, Character $character, $defaultWorldMaps, $defaultRegionMaps)
     {
         $now = CarbonImmutable::now();
@@ -63,7 +71,7 @@ final class WorldMapAreaActionResolver
         if (!$zone) return null;
         $monsters = $zone->monsters->map(function ($monster) {
             return ['name' => $monster->name, 'level' => (int) $monster->level, 'loot' => $monster->lootEntries->where('status', 'active')->map(function ($entry) {
-                return ['item_name' => $entry->item->name, 'chance_basis_points' => (int) $entry->drop_chance_basis_points, 'minimum_quantity' => (int) $entry->minimum_quantity, 'maximum_quantity' => (int) $entry->maximum_quantity];
+                return ['item_name' => $entry->item->name, 'drop_probability_ppm' => (int) $entry->drop_probability_ppm, 'drop_probability_percent' => $this->probabilities->toPercentageString((int) $entry->drop_probability_ppm), 'minimum_quantity' => (int) $entry->minimum_quantity, 'maximum_quantity' => (int) $entry->maximum_quantity];
             })->values()->all()];
         })->values()->all();
         $available = $zone->status === 'active' && (bool) $zone->allows_hunting;

@@ -1,2 +1,10 @@
 <?php
-namespace App\Domain\Loot\Data;final class LootDrop {private $v;public function __construct($itemId,$code,$name,$type,$rarity,$quantity,$chance,$roll){$this->v=func_get_args();}public function itemId(){return$this->v[0];}public function itemCode(){return$this->v[1];}public function itemName(){return$this->v[2];}public function itemType(){return$this->v[3];}public function itemRarity(){return$this->v[4];}public function quantity(){return$this->v[5];}public function configuredChanceBasisPoints(){return$this->v[6];}public function chanceRollBasisPoints(){return$this->v[7];}}
+namespace App\Domain\Loot\Data;
+use App\Domain\Inventory\Instances\Rarity\ItemRarityRollResult;
+final class LootDrop
+{
+    private $itemId,$code,$name,$type,$quantity,$probability,$roll,$rarity;
+    public function __construct($itemId,$code,$name,$type,$quantity,$probabilityPpm,$rollPpm,ItemRarityRollResult $rarity=null){$this->itemId=$itemId;$this->code=$code;$this->name=$name;$this->type=$type;$this->quantity=$quantity;$this->probability=$probabilityPpm;$this->roll=$rollPpm;$this->rarity=$rarity;}
+    public function itemId(){return$this->itemId;}public function itemCode(){return$this->code;}public function itemName(){return$this->name;}public function itemType(){return$this->type;}public function quantity(){return$this->quantity;}public function configuredProbabilityPpm(){return$this->probability;}public function probabilityRollPpm(){return$this->roll;}
+    public function itemRarityRollResult(){return$this->rarity;}public function resolvedItemRarityId(){return$this->rarity?$this->rarity->resolvedRarityId():null;}public function resolvedItemRarityCode(){return$this->rarity?$this->rarity->resolvedRarityCode():null;}
+}

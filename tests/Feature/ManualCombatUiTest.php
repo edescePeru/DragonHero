@@ -194,4 +194,63 @@ class ManualCombatUiTest extends TestCase
         $response->assertOk()->assertSee('×99')->assertSee('×4')->assertDontSee('×103');
         $this->assertSame(2, substr_count($response->getContent(), 'data-item-id="'.$item->id.'"'));
     }
+    public function test_manual_inventory_distinguishes_same_item_instances_by_reference_and_rarity()
+    {
+        $html = view('characters.manual-combats.partials.inventory', [
+            'inventory' => [
+                'inventory_status' => [
+                    'current_used_slots' => 2,
+                    'effective_capacity' => 30,
+                    'current_free_slots' => 28,
+                ],
+                'stackable_items' => [],
+                'item_instances' => [
+                    [
+                        'item_id' => 8,
+                        'item_name' => 'Espada de práctica',
+                        'image_url' => null,
+                        'public_reference' => 'DH-COMMON-001',
+                        'rarity_name' => 'Común',
+                        'rarity_visual_style' => 'neutral',
+                        'rarity_visual_style_attribute' => '--rarity-border-rgb:163, 163, 163;--rarity-border-opacity:1;--rarity-border-width:1px;--rarity-glow-rgb:163, 163, 163;--rarity-glow-opacity:0;--rarity-glow-blur:0px;--rarity-glow-spread:0px',
+                        'refinement_level' => 0,
+                    ],
+                    [
+                        'item_id' => 8,
+                        'item_name' => 'Espada de práctica',
+                        'image_url' => null,
+                        'public_reference' => 'DH-LEGENDARY-002',
+                        'rarity_name' => 'Legendario',
+                        'rarity_visual_style' => 'gold',
+                        'rarity_visual_style_attribute' => '--rarity-border-rgb:183, 121, 31;--rarity-border-opacity:1;--rarity-border-width:2px;--rarity-glow-rgb:183, 121, 31;--rarity-glow-opacity:0.35;--rarity-glow-blur:20px;--rarity-glow-spread:2px',
+                        'refinement_level' => 0,
+                    ],
+                ],
+            ],
+        ])->render();
+
+        $this->assertStringContainsString('id="manual-combat-inventory-panel"', $html);
+        $this->assertStringContainsString('data-item-instance-reference="DH-COMMON-001"', $html);
+        $this->assertStringContainsString('data-item-instance-reference="DH-LEGENDARY-002"', $html);
+        $this->assertStringContainsString('item-rarity--neutral', $html);
+        $this->assertStringContainsString('item-rarity--gold', $html);
+        $this->assertStringContainsString('item-rarity-visual', $html);
+        $this->assertStringContainsString('--rarity-border-rgb:183, 121, 31', $html);
+        $this->assertStringContainsString('Común', $html);
+        $this->assertStringContainsString('Legendario', $html);
+        $this->assertStringContainsString('Instancia #DH-COMMON-001', $html);
+        $this->assertStringContainsString('Instancia #DH-LEGENDARY-002', $html);
+        $this->assertStringNotContainsString('badge bg-secondary item-rarity', $html);
+    }
+
+    public function test_manual_claim_replaces_only_inventory_with_authoritative_html()
+    {
+        $javascript = file_get_contents(public_path('assets/js/manual-combat.js'));
+
+        $this->assertStringContainsString('replaceInventoryPanel(data.inventory_html)', $javascript);
+        $this->assertStringContainsString('new window.DOMParser()', $javascript);
+        $this->assertStringContainsString("getElementById('manual-combat-inventory-panel')", $javascript);
+        $this->assertStringContainsString('current.replaceWith(document.importNode(replacement, true))', $javascript);
+        $this->assertStringNotContainsString("manual-combat-inventory-panel').innerHTML", $javascript);
+    }
 }

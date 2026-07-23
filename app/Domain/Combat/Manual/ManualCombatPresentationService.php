@@ -5,6 +5,8 @@ namespace App\Domain\Combat\Manual;
 use App\Domain\Characters\Appearance\CharacterAppearanceService;
 use App\Domain\Equipment\CharacterEquipmentSlot;
 use App\Domain\Inventory\CharacterInventorySummaryService;
+use App\Domain\Inventory\Instances\Data\ItemInstanceEntry;
+use App\Domain\Inventory\Instances\Rarity\ItemRarityVisualStyleResolver;
 use App\Domain\Media\MediaAssetType;
 use App\Models\Character;
 use App\Models\CombatSession;
@@ -15,11 +17,13 @@ final class ManualCombatPresentationService
 {
     private $appearance;
     private $inventory;
+    private $rarityVisuals;
 
-    public function __construct(CharacterAppearanceService $appearance, CharacterInventorySummaryService $inventory)
+    public function __construct(CharacterAppearanceService $appearance, CharacterInventorySummaryService $inventory, ItemRarityVisualStyleResolver $rarityVisuals)
     {
         $this->appearance = $appearance;
         $this->inventory = $inventory;
+        $this->rarityVisuals = $rarityVisuals;
     }
 
     public function prepare(Character $character, CombatSession $combat)
@@ -71,7 +75,7 @@ final class ManualCombatPresentationService
             'participant_visuals' => $visuals,
             'background' => $this->background($combat),
             'equipment' => $this->equipment($character),
-            'inventory' => $this->decorateInventory($this->inventory->snapshot($character)),
+            'inventory' => $this->inventory($character),
             'combat_stats' => $this->combatStats($characterParticipant ? $characterParticipant->stats_snapshot : []),
         ];
     }
@@ -85,6 +89,18 @@ final class ManualCombatPresentationService
             return $row;
         }, isset($rewards['items']) ? $rewards['items'] : []);
         return $rewards;
+    }
+
+    public function inventory(Character $character)
+    {
+        return $this->decorateInventory($this->inventory->snapshot($character));
+    }
+
+    public function inventoryHtml(Character $character)
+    {
+        return view('characters.manual-combats.partials.inventory', [
+            'inventory' => $this->inventory($character),
+        ])->render();
     }
 
     public function returnUrl(CombatSession $combat)
@@ -107,14 +123,15 @@ final class ManualCombatPresentationService
 
     private function equipment(Character $character)
     {
-        $character->loadMissing(['equipment.itemInstance.item.mediaAssets']);
+        $character->loadMissing(['equipment.itemInstance.item.mediaAssets','equipment.itemInstance.itemRarity']);
         $bySlot = $character->equipment->keyBy('slot');
         $rows = [];
         foreach (CharacterEquipmentSlot::all() as $slot) {
             $equipped = $bySlot->get($slot);
             $instance = $equipped ? $equipped->itemInstance : null;
             $item = $instance ? $instance->item : null;
-            $rows[] = ['slot' => $slot, 'label' => CharacterEquipmentSlot::label($slot), 'occupied' => (bool) $item, 'item_name' => $item ? $item->name : null, 'refinement_level' => $instance ? (int) $instance->refinement_level : null, 'image_url' => $this->iconUrl($item)];
+            $visual = $instance && $instance->itemRarity ? $this->rarityVisuals->resolve($instance->itemRarity) : null;
+            $rows[] = ['slot' => $slot, 'label' => CharacterEquipmentSlot::label($slot), 'occupied' => (bool) $item, 'item_name' => $item ? $item->name : null, 'refinement_level' => $instance ? (int) $instance->refinement_level : null, 'image_url' => $this->iconUrl($item), 'rarity_name' => $instance && $instance->itemRarity ? $instance->itemRarity->name : null, 'rarity_visual_style' => $instance && $instance->itemRarity ? $instance->itemRarity->visual_style : null, 'public_reference' => $instance ? ItemInstanceEntry::publicReferenceFor($instance->uuid) : null, 'rarity_visual' => $visual ? $visual->toArray() : [], 'css_variables' => $visual ? $visual->cssVariables() : [], 'rarity_visual_style_attribute' => $visual ? $visual->inlineStyle() : ''];
         }
         return $rows;
     }

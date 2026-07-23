@@ -45,6 +45,8 @@ use App\Http\Controllers\Admin\Content\CharacterProgressionController as AdminCh
 use App\Http\Controllers\Admin\Content\NpcController as AdminNpcController;
 use App\Http\Controllers\Admin\Content\ShopController as AdminShopController;
 use App\Http\Controllers\Admin\Content\ShopOfferController as AdminShopOfferController;
+use App\Http\Controllers\Admin\Content\ItemRarityController as AdminItemRarityController;
+use App\Http\Controllers\Admin\Content\ItemRarityDropRateController as AdminItemRarityDropRateController;
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', ShowLoginController::class)->name('login');
@@ -109,6 +111,10 @@ Route::middleware(['auth', 'game.navigation', 'character.required'])->group(func
 });
 
 Route::prefix('admin/content')->name('admin.content.')->middleware(['auth','game.navigation','content.admin'])->group(function(){
+    Route::get('item-rarity-drop-rates',[AdminItemRarityDropRateController::class,'index'])->name('item-rarity-drop-rates.index');
+    Route::put('item-rarity-drop-rates',[AdminItemRarityDropRateController::class,'update'])->name('item-rarity-drop-rates.update');
+    Route::get('item-rarities',[AdminItemRarityController::class,'index'])->name('item-rarities.index');
+    Route::put('item-rarities/{itemRarity}',[AdminItemRarityController::class,'update'])->name('item-rarities.update');
     Route::patch('character-classes/{character_class}/activate',[AdminCharacterClassController::class,'activate'])->name('character-classes.activate');
     Route::patch('character-classes/{character_class}/deactivate',[AdminCharacterClassController::class,'deactivate'])->name('character-classes.deactivate');
     Route::patch('character-classes/{character_class}/hide',[AdminCharacterClassController::class,'hide'])->name('character-classes.hide');

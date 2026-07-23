@@ -113,6 +113,7 @@ final class ManualCombatController extends Controller
         try {
             $result = $service->claim($character, $combatSession)->toArray();
             $result['rewards'] = $presentation->decorateRewards($result['rewards']);
+            $result['inventory_html'] = $presentation->inventoryHtml($character);
             return response()->json($result);
         } catch (CombatRewardDeliveryUnavailableException $exception) {
             return response()->json(['message' => $exception->getMessage(), 'inventory_capacity' => $exception->capacity()->toArray()], 409);
