@@ -8,11 +8,13 @@
         <div><h1>{{ $worldMap['map']['name'] }}</h1><p>{{ $worldMap['map']['context']['name'] }}</p></div>
         <div>
             @if(isset($worldMap['navigation']))
-                <div class="small text-secondary">Mundo</div><div class="fw-semibold mb-2">{{ $worldMap['navigation']['world']->name }}</div>
-                <label class="form-label" for="world-region-selector">Región</label>
-                <select id="world-region-selector" class="form-select" onchange="if(this.value) window.location.assign(this.value)">
-                    @foreach($worldMap['navigation']['regions'] as $region)<option value="{{ $region['url'] }}" @if($region['id']===$worldMap['navigation']['region']->id) selected @endif>{{ $region['name'] }}</option>@endforeach
-                </select>
+                <div class="d-flex align-items-center flex-wrap gap-2" data-world-navigation-context>
+                    <span><span class="text-secondary">Mundo:</span> <strong>{{ $worldMap['navigation']['world']->name }}</strong></span>
+                    <label class="form-label mb-0" for="world-region-selector">Región:</label>
+                    <select id="world-region-selector" class="form-select w-auto" onchange="if(this.value) window.location.assign(this.value)">
+                        @foreach($worldMap['navigation']['regions'] as $region)<option value="{{ $region['url'] }}" @if($region['id']===$worldMap['navigation']['region']->id) selected @endif>{{ $region['name'] }}</option>@endforeach
+                    </select>
+                </div>
             @else
                 <label class="form-label">World / Region</label>
                 <select class="form-select" onchange="if(this.value) window.location.assign(this.value)">

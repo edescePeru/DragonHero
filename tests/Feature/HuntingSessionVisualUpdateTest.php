@@ -13,6 +13,8 @@ use App\Models\Item;
 use App\Models\Monster;
 use App\Models\MonsterLootEntry;
 use App\Models\User;
+use App\Models\Region;
+use App\Models\World;
 use App\Models\Zone;
 use Carbon\CarbonImmutable;
 use Database\Seeders\WorldCatalogSeeder;
@@ -81,7 +83,27 @@ class HuntingSessionVisualUpdateTest extends TestCase
         $response->assertSee('renderedHuntIds=new Set()',false)->assertSee('renderedEventsByHunt=new Map()',false)->assertSee('function ensureHuntBlock',false)->assertSee("block.dataset.huntId",false)->assertSee("document.getElementById('combat-log').prepend(block)",false)->assertSee("heading.textContent='Encuentro '+hunt.encounter_number",false)->assertSee('function renderInitialHistory',false)->assertSee('Hay eventos anteriores no mostrados',false)->assertDontSee("clearNode(document.getElementById('combat-log'))",false);
         $response->assertSee('renderInventoryItems(data.stackable_items,data.item_instances,data.inventory_status)',false)->assertSee("updateClaimButton(data.character_pending_rewards_summary,'idle')",false)->assertSee("button.textContent=requestState==='loading'?'Reclamando…':'Reclamar todas'",false);
         $response->assertSee('function completeCurrentPlaybackImmediately()',false)->assertSee("renderPlaybackAt(playback,Number(playback.hunt.playback_duration_ms))",false)->assertSee("stopRequested=true",false)->assertSee("if(requestInFlight||stopRequested)return",false)->assertSee("if(stopRequested)sendStop()",false)->assertSee("if(stopInFlight)return",false)->assertSee("event.preventDefault();requestStop(false)",false)->assertSee('Cacería detenida. Se conservaron todos los encuentros y recompensas obtenidos hasta este momento.',false);
-        $response->assertSee('href="'.route('regions.show',$this->zone()->region).'"',false)->assertSee('← Volver a zonas')->assertSee('Detener y volver a zonas')->assertSee('Tu cacería sigue activa')->assertSee('Seguir cazando')->assertSee('Salir de todos modos')->assertSee("if(lastState.status!=='running')return",false)->assertSee('requestStop(true)',false)->assertSee('if(redirectAfterStop)window.location.assign(root.dataset.zonesUrl)',false)->assertSee('No se pudo confirmar la detención',false);
+        $response->assertSee('href="'.route('worlds.show',$this->zone()->region->world).'"',false)->assertDontSee('href="'.route('regions.show',$this->zone()->region).'"',false)->assertSee('← Volver a zonas')->assertSee('Detener y volver a zonas')->assertSee('Tu cacería sigue activa')->assertSee('Seguir cazando')->assertSee('Salir de todos modos')->assertSee("if(lastState.status!=='running')return",false)->assertSee('requestStop(true)',false)->assertSee('if(redirectAfterStop)window.location.assign(root.dataset.zonesUrl)',false)->assertSee('No se pudo confirmar la detención',false);
+    }
+
+    public function test_back_to_zones_uses_the_session_world_when_region_and_world_ids_differ()
+    {
+        $sourceWorld = World::where('code', 'eldoria')->firstOrFail();
+        Region::create(['world_id' => $sourceWorld->id, 'code' => 'id-offset', 'name' => 'ID Offset', 'recommended_level_min' => 1, 'status' => 'active', 'sort_order' => 90]);
+        Region::create(['world_id' => $sourceWorld->id, 'code' => 'id-offset-two', 'name' => 'ID Offset Two', 'recommended_level_min' => 1, 'status' => 'active', 'sort_order' => 91]);
+        $targetWorld = World::create(['code' => 'navigation-target', 'name' => 'Navigation Target', 'status' => 'active', 'sort_order' => 90]);
+        $targetRegion = Region::create(['world_id' => $targetWorld->id, 'code' => 'target-region', 'name' => 'Target Region', 'recommended_level_min' => 1, 'status' => 'active', 'sort_order' => 0]);
+        $zone = $this->zone();
+        $zone->update(['region_id' => $targetRegion->id]);
+        $this->assertNotSame((int) $targetWorld->id, (int) $targetRegion->id);
+
+        $character = $this->player();
+        $session = HuntingSession::findOrFail(app(HuntingSessionService::class)->start($character, $zone)->id());
+        $response = $this->actingAs($character->user)->get(route('characters.hunting-sessions.show', [$character, $session]));
+
+        $response->assertOk()
+            ->assertSee('href="'.route('worlds.show', $targetWorld).'"', false)
+            ->assertDontSee('href="'.route('regions.show', $targetRegion).'"', false);
     }
 
     public function test_victory_reward_remains_in_response_when_capacity_stops_same_tick()

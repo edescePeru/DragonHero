@@ -128,6 +128,8 @@ Route::prefix('admin/content')->name('admin.content.')->middleware(['auth','game
     Route::patch('shops/{shop}/offers/{offer}/deactivate',[AdminShopOfferController::class,'deactivate'])->name('shops.offers.deactivate');
     Route::get('progression',[AdminCharacterProgressionController::class,'index'])->name('progression.index');
     Route::put('progression',[AdminCharacterProgressionController::class,'update'])->name('progression.update');
+    Route::get('combat-balance',[\App\Http\Controllers\Admin\Content\CombatBalanceController::class,'index'])->name('combat-balance.index');
+    Route::put('combat-balance',[\App\Http\Controllers\Admin\Content\CombatBalanceController::class,'update'])->name('combat-balance.update');
     Route::get('worlds/{world}/regions', [AdminRegionController::class, 'index'])->name('worlds.regions.index');
     Route::get('worlds/{world}/regions/create', [AdminRegionController::class, 'create'])->name('worlds.regions.create');
     Route::post('worlds/{world}/regions', [AdminRegionController::class, 'store'])->name('worlds.regions.store');

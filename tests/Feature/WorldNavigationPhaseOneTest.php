@@ -90,7 +90,10 @@ class WorldNavigationPhaseOneTest extends TestCase
         $this->map($foreign, 'Mapa extranjero');
 
         $response = $this->actingAs($this->character->user)->get(route('worlds.show', $this->world));
-        $response->assertOk()->assertSee('Mapa inicial')->assertSee('Primera Región')->assertSee(route('worlds.regions.show', [$this->world, $existing]), false)->assertDontSee('Sin mapa')->assertDontSee('Región Inactiva')->assertDontSee('Región extranjera');
+        $response->assertOk()->assertSee('Mapa inicial')->assertSee('Mundo:')->assertSee('Eldoria')->assertSee('Región:')->assertSee('Primera Región')
+            ->assertSee('class="d-flex align-items-center flex-wrap gap-2" data-world-navigation-context', false)
+            ->assertSee('id="world-region-selector" class="form-select w-auto"', false)
+            ->assertSee(route('worlds.regions.show', [$this->world, $existing]), false)->assertDontSee('Sin mapa')->assertDontSee('Región Inactiva')->assertDontSee('Región extranjera');
 
         $this->get(route('worlds.regions.show', [$this->world, $existing]))
             ->assertOk()

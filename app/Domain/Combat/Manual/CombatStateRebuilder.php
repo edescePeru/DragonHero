@@ -6,6 +6,7 @@ use App\Domain\Combat\CombatSide;
 use App\Domain\Combat\CombatTurnOrder;
 use App\Domain\Combat\CombatStateStatus;
 use App\Domain\Combat\Data\CombatantStats;
+use App\Domain\Combat\Data\CombatMitigationConfig;
 use App\Domain\Combat\Data\CombatParticipantState;
 use App\Domain\Combat\Data\CombatState;
 use App\Models\CombatParticipant;
@@ -50,7 +51,9 @@ final class CombatStateRebuilder
             (float) $snapshot['critical_chance'],
             (float) $snapshot['critical_damage_multiplier'],
             (float) $snapshot['attack_speed'],
-            (float) $snapshot['damage_reduction_rate']
+            (float) $snapshot['damage_reduction_rate'],
+            isset($snapshot['absorb_damage_basis_points']) ? (int) $snapshot['absorb_damage_basis_points'] : 0,
+            isset($snapshot['combat_mitigation_config']) ? CombatMitigationConfig::fromArray($snapshot['combat_mitigation_config']) : CombatMitigationConfig::defaults()
         );
 
         $team = $participant->team === CombatSide::PLAYERS ? CombatSide::PLAYERS : CombatSide::ENEMIES;

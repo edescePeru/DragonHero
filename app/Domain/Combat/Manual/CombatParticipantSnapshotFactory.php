@@ -70,6 +70,8 @@ final class CombatParticipantSnapshotFactory
             'critical_damage_multiplier' => $stats->criticalDamageMultiplier(),
             'attack_speed' => $stats->attackSpeed(),
             'damage_reduction_rate' => $stats->damageReductionRate(),
+            'absorb_damage_basis_points' => $stats->absorbDamageBasisPoints(),
+            'combat_mitigation_config' => $stats->mitigationConfig()->toArray(),
         ]);
     }
 }

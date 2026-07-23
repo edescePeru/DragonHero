@@ -44,6 +44,7 @@ final class ManualCombatStatePersistenceService
                 'hit' => (bool) $action->hit(),
                 'critical' => (bool) $action->critical(),
                 'damage' => (int) $action->damage(),
+                'mitigation' => $action->mitigation() ? $action->mitigation()->toArray() : null,
                 'hp_before' => (int) $action->defenderHealthBefore(),
                 'hp_after' => (int) $action->defenderHealthAfter(),
                 'defeated' => $target->current_hp === 0,

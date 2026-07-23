@@ -68,19 +68,19 @@ class CharacterStatsCalculatorTest extends TestCase
         $this->assertSame(1.0, $this->calculate()->attackSpeed());
     }
 
-    public function test_damage_reduction_uses_the_provisional_formula()
+    public function test_damage_reduction_is_contextual_and_not_precalculated()
     {
-        $this->assertSame(4.76, $this->calculate()->damageReductionRate());
+        $this->assertSame(0.0, $this->calculate()->damageReductionRate());
     }
 
-    public function test_damage_reduction_respects_the_maximum()
+    public function test_character_starts_without_absorb_damage()
     {
-        $this->assertSame(75.0, $this->calculate(['base_defense' => 1000])->damageReductionRate());
+        $this->assertSame(0, $this->calculate(['base_defense' => 1000])->absorbDamageBasisPoints());
     }
 
     public function test_power_uses_the_complete_unrounded_formula()
     {
-        $this->assertSame(147, $this->calculate()->power());
+        $this->assertSame(143, $this->calculate()->power());
     }
 
     public function test_future_bonuses_start_at_zero()

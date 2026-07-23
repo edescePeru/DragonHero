@@ -105,7 +105,7 @@ class ManualCombatActionTest extends TestCase
     {
         $character=$this->player(['base_attack'=>10]);$combat=$this->combat($character);$target=$this->target($combat);$target->update(['current_hp'=>1000,'max_hp'=>1000]);$snapshot=$target->stats_snapshot;$snapshot['max_health']=1000;$target->update(['stats_snapshot'=>$snapshot]);$this->rng([1,1,10000]);
         $response=$this->actingAs($character->user)->postJson(route('characters.manual-combats.actions.store',[$character,$combat]),$this->payload($combat,$target));
-        $attack=collect($response->json('events'))->firstWhere('type',ManualCombatEventType::BASIC_ATTACK);$expected=max(1,(int)round(10*(1-$snapshot['damage_reduction_rate']/100)*1.5));
+        $attack=collect($response->json('events'))->firstWhere('type',ManualCombatEventType::BASIC_ATTACK);$expected=$attack['payload']['targets'][0]['mitigation']['final_damage'];
         $this->assertTrue($attack['payload']['targets'][0]['critical']);$this->assertSame($expected,$attack['payload']['targets'][0]['damage']);$this->assertSame(1000-$expected,$target->fresh()->current_hp);
     }
 

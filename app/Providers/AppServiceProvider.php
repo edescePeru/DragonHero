@@ -17,6 +17,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(\App\Domain\Random\RandomNumberGenerator::class, \App\Domain\Random\NativeRandomNumberGenerator::class);
         $this->app->bind(\App\Domain\Hunts\Playback\HuntingPlaybackSpeedProvider::class, \App\Domain\Hunts\Playback\FixedHuntingPlaybackSpeedProvider::class);
+        $this->app->singleton(\App\Domain\Combat\CombatMitigationConfigProvider::class);
     }
 
     /**
